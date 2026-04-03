@@ -256,28 +256,17 @@ function App() {
 
   return (
     <main className="app-shell">
-      <section className="hero-panel">
-        <div>
-          <span className="hero-panel__eyebrow">Guest workspace</span>
-          <h1>Plan the work. Move the work. Keep it light.</h1>
-          <p className="hero-panel__copy">
-            A focused kanban board with anonymous access, Supabase persistence,
-            and simple drag-and-drop status updates.
-          </p>
+      <section className="board-toolbar">
+        <div className="hero-panel__meta">
+          <span className="meta-chip">{tasks.length} tasks</span>
+          <span className="meta-chip meta-chip--muted">
+            Session {session?.user?.id?.slice(0, 8) ?? 'guest'}
+          </span>
         </div>
 
-        <div className="hero-panel__actions">
-          <div className="hero-panel__meta">
-            <span className="meta-chip">{tasks.length} tasks</span>
-            <span className="meta-chip meta-chip--muted">
-              Session {session?.user?.id?.slice(0, 8) ?? 'guest'}
-            </span>
-          </div>
-
-          <button className="primary-button" type="button" onClick={handleOpenCreate}>
-            New Task
-          </button>
-        </div>
+        <button className="primary-button" type="button" onClick={handleOpenCreate}>
+          New Task
+        </button>
       </section>
 
       {actionError ? (
