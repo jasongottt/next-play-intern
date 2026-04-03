@@ -10,6 +10,7 @@ import {
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { useEffect, useRef, useState } from 'react'
+import Grainient from './components/Grainient'
 import { COLUMNS } from './constants/columns'
 import {
   createTask,
@@ -116,7 +117,7 @@ function App() {
     setAppError('')
 
     try {
-      const activeSession = await ensureGuestSession()
+      await ensureGuestSession()
 
       const nextTasks = await fetchTasks()
       setTasks(nextTasks)
@@ -287,6 +288,19 @@ function App() {
         onPointerMove={handleBoardStagePointerMove}
         onPointerLeave={handleBoardStagePointerLeave}
       >
+        <Grainient
+          className="app-grainient"
+          color1="#2e2250"
+          color2="#0c2319"
+          color3="#471520"
+          timeSpeed={0.2}
+          grainAmount={0.08}
+          grainScale={2.2}
+          warpFrequency={4.5}
+          warpAmplitude={55}
+          saturation={1.15}
+          zoom={0.95}
+        />
         <div className="board-stage__content">
 
           <section className="board-toolbar">
