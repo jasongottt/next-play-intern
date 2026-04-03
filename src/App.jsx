@@ -287,21 +287,7 @@ function App() {
         className="board-stage"
         onPointerMove={handleBoardStagePointerMove}
         onPointerLeave={handleBoardStagePointerLeave}
-      >
-        <Grainient
-          className="app-grainient"
-          color1="#2e2250"
-          color2="#0c2319"
-          color3="#471520"
-          timeSpeed={0.2}
-          grainAmount={0.08}
-          grainScale={2.2}
-          warpFrequency={4.5}
-          warpAmplitude={55}
-          saturation={1.15}
-          zoom={0.95}
-        />
-        <div className="board-stage__content">
+      >        <div className="board-stage__content">
 
           <section className="board-toolbar">
             <header className="app-header">

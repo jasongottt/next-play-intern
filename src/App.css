@@ -39,7 +39,7 @@
     rgba(0, 0, 0, 0.78) 74%,
     rgba(0, 0, 0, 1) 80%
   );
-  opacity: 0.9;
+  opacity: 0.95;
 }
 
 .board-stage::after {
