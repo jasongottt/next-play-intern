@@ -1,7 +1,66 @@
 .app-shell {
+  width: 100%;
+  min-height: 100vh;
+}
+
+.board-stage {
+  --spotlight-x: 50%;
+  --spotlight-y: 22%;
+  --spotlight-opacity: 0;
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  padding: 0;
+  isolation: isolate;
+}
+
+.board-stage::before,
+.board-stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.board-stage::before {
+  background: rgba(0, 0, 0, 0.82);
+  mix-blend-mode: saturation;
+  mask-image: radial-gradient(
+    circle 300px at var(--spotlight-x) var(--spotlight-y),
+    transparent 0,
+    transparent 52%,
+    rgba(0, 0, 0, 0.78) 74%,
+    rgba(0, 0, 0, 1) 100%
+  );
+  opacity: 0.8;
+}
+
+.board-stage::after {
+  background-color: rgba(255, 255, 255, 0.06);
+  backdrop-filter: brightness(1.08) contrast(1.04);
+  -webkit-backdrop-filter: brightness(1.08) contrast(1.04);
+  mask-image: radial-gradient(
+    circle 250px at var(--spotlight-x) var(--spotlight-y),
+    rgba(0, 0, 0, 1) 0,
+    rgba(0, 0, 0, 0.72) 58%,
+    transparent 84%
+  );
+  opacity: var(--spotlight-opacity);
+  transition: opacity 180ms ease;
+}
+
+.board-stage__content {
+  position: relative;
+  z-index: 1;
   width: min(1280px, calc(100% - 32px));
   margin: 0 auto;
   padding: 48px 0 56px;
+}
+
+.board-stage__content > * {
+  position: relative;
+  z-index: 1;
 }
 
 .board-toolbar {
@@ -9,6 +68,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+  padding: 0 0 22px;
 }
 
 .status-screen__eyebrow,
@@ -54,12 +114,12 @@
 
 .meta-chip {
   border: 1px solid var(--border-strong);
-  background: rgba(255, 255, 255, 0.68);
+  background: rgba(27, 35, 61, 0.72);
   color: var(--text-main);
 }
 
 .meta-chip--muted {
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(18, 24, 43, 0.82);
   color: var(--text-soft);
 }
 
@@ -79,8 +139,8 @@
 .primary-button {
   padding: 14px 18px;
   background: var(--accent);
-  color: white;
-  box-shadow: 0 18px 35px rgba(33, 74, 135, 0.24);
+  color: #081120;
+  box-shadow: 0 18px 35px rgba(29, 79, 158, 0.3);
 }
 
 .primary-button:hover,
@@ -177,6 +237,7 @@
   padding: 20px;
   text-align: center;
   color: var(--text-soft);
+  background: rgba(11, 16, 31, 0.54);
 }
 
 .empty-column p {
@@ -186,7 +247,7 @@
 }
 
 .task-card {
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   border-radius: 20px;
   padding: 16px;
   background: var(--surface);
@@ -239,18 +300,18 @@
 }
 
 .badge--priority-low {
-  background: #edf7f1;
-  color: #21653e;
+  background: rgba(38, 88, 58, 0.52);
+  color: #c6f7d8;
 }
 
 .badge--priority-normal {
-  background: #eef4ff;
-  color: #2859a8;
+  background: rgba(33, 63, 116, 0.52);
+  color: #cfe2ff;
 }
 
 .badge--priority-high {
-  background: #fff0ec;
-  color: #b44d27;
+  background: rgba(123, 55, 36, 0.58);
+  color: #ffd8cd;
 }
 
 .badge--due-neutral {
@@ -259,27 +320,29 @@
 }
 
 .badge--due-soon {
-  background: #fff5df;
-  color: #8d6512;
+  background: rgba(119, 88, 19, 0.58);
+  color: #ffe6a6;
 }
 
 .badge--due-overdue {
-  background: #ffe8e3;
-  color: #b33d2e;
+  background: rgba(121, 40, 40, 0.64);
+  color: #ffbeb9;
 }
 
 .task-card--priority-high {
-  border-color: rgba(180, 77, 39, 0.22);
+  border-color: rgba(180, 77, 39, 0.3);
 }
 
 .task-card--priority-low {
-  border-color: rgba(33, 101, 62, 0.18);
+  border-color: rgba(56, 138, 91, 0.28);
 }
 
 .status-screen {
   display: grid;
   place-items: center;
+  width: min(1280px, calc(100% - 32px));
   min-height: calc(100vh - 96px);
+  margin: 48px auto;
   padding: 32px;
   border: 1px solid var(--border);
   border-radius: 32px;
@@ -304,7 +367,7 @@
 
 .modal {
   width: min(560px, 100%);
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(141, 162, 204, 0.22);
   border-radius: 28px;
   padding: 24px;
   background: var(--panel);
@@ -375,6 +438,10 @@
 
 @media (max-width: 1024px) {
   .app-shell {
+    min-height: 100vh;
+  }
+
+  .board-stage__content {
     width: min(100%, calc(100% - 20px));
     padding: 24px 0 40px;
   }
@@ -391,17 +458,21 @@
   .board {
     grid-template-columns: repeat(4, minmax(260px, 260px));
   }
+
+  .status-screen {
+    width: min(100%, calc(100% - 20px));
+    margin: 24px auto;
+  }
 }
 
 @media (max-width: 640px) {
-  .hero-panel,
+  .board-stage,
   .board-column,
   .modal,
   .status-screen {
     border-radius: 22px;
   }
 
-  .hero-panel,
   .modal {
     padding: 20px;
   }

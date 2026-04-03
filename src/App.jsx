@@ -9,7 +9,7 @@ import {
   useSensors,
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { COLUMNS } from './constants/columns'
 import {
   createTask,
@@ -86,6 +86,7 @@ function getDueDateTone(dueDate) {
 }
 
 function App() {
+  const boardStageRef = useRef(null)
   const [session, setSession] = useState(null)
   const [tasks, setTasks] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -227,6 +228,32 @@ function App() {
     setActiveTaskId(null)
   }
 
+  function handleBoardStagePointerMove(event) {
+    const stage = boardStageRef.current
+
+    if (!stage) {
+      return
+    }
+
+    const bounds = stage.getBoundingClientRect()
+    const x = ((event.clientX - bounds.left) / bounds.width) * 100
+    const y = ((event.clientY - bounds.top) / bounds.height) * 100
+
+    stage.style.setProperty('--spotlight-x', `${x}%`)
+    stage.style.setProperty('--spotlight-y', `${y}%`)
+    stage.style.setProperty('--spotlight-opacity', '1')
+  }
+
+  function handleBoardStagePointerLeave() {
+    const stage = boardStageRef.current
+
+    if (!stage) {
+      return
+    }
+
+    stage.style.setProperty('--spotlight-opacity', '0')
+  }
+
   if (isLoading) {
     return (
       <main className="app-shell">
@@ -256,47 +283,56 @@ function App() {
 
   return (
     <main className="app-shell">
-      <section className="board-toolbar">
-        <div className="hero-panel__meta">
-          <span className="meta-chip">{tasks.length} tasks</span>
-          <span className="meta-chip meta-chip--muted">
-            Session {session?.user?.id?.slice(0, 8) ?? 'guest'}
-          </span>
-        </div>
-
-        <button className="primary-button" type="button" onClick={handleOpenCreate}>
-          New Task
-        </button>
-      </section>
-
-      {actionError ? (
-        <div className="banner banner--error" role="alert">
-          {actionError}
-        </div>
-      ) : null}
-
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-        onDragCancel={handleDragCancel}
+      <section
+        ref={boardStageRef}
+        className="board-stage"
+        onPointerMove={handleBoardStagePointerMove}
+        onPointerLeave={handleBoardStagePointerLeave}
       >
-        <section className="board">
-          {COLUMNS.map((column) => (
-            <BoardColumn
-              key={column.id}
-              column={column}
-              tasks={tasksByColumn[column.id]}
-              activeTaskId={activeTaskId}
-            />
-          ))}
-        </section>
+        <div className="board-stage__content">
+          <section className="board-toolbar">
+            <div className="hero-panel__meta">
+              <span className="meta-chip">{tasks.length} tasks</span>
+              <span className="meta-chip meta-chip--muted">
+                Session {session?.user?.id?.slice(0, 8) ?? 'guest'}
+              </span>
+            </div>
 
-        <DragOverlay>
-          {activeTask ? <TaskPreviewCard task={activeTask} /> : null}
-        </DragOverlay>
-      </DndContext>
+            <button className="primary-button" type="button" onClick={handleOpenCreate}>
+              New Task
+            </button>
+          </section>
+
+          {actionError ? (
+            <div className="banner banner--error" role="alert">
+              {actionError}
+            </div>
+          ) : null}
+
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
+          >
+            <section className="board">
+              {COLUMNS.map((column) => (
+                <BoardColumn
+                  key={column.id}
+                  column={column}
+                  tasks={tasksByColumn[column.id]}
+                  activeTaskId={activeTaskId}
+                />
+              ))}
+            </section>
+
+            <DragOverlay>
+              {activeTask ? <TaskPreviewCard task={activeTask} /> : null}
+            </DragOverlay>
+          </DndContext>
+        </div>
+      </section>
 
       {isCreateOpen ? (
         <CreateTaskModal

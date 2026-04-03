@@ -1,8 +1,6 @@
 :root {
-  color: #14213d;
-  background:
-    radial-gradient(circle at top, rgba(240, 212, 178, 0.3), transparent 32%),
-    linear-gradient(180deg, #f6f1e8 0%, #f7f9fc 100%);
+  color: #e7eefc;
+  background: #070b15;
   font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -11,22 +9,22 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --bg: #f7f9fc;
-  --panel: rgba(255, 255, 255, 0.82);
-  --panel-highlight: rgba(240, 247, 255, 0.96);
-  --surface: rgba(255, 255, 255, 0.95);
-  --surface-muted: #eef3f8;
-  --text-main: #14213d;
-  --text-soft: #5f6c87;
-  --border: rgba(20, 33, 61, 0.12);
-  --border-strong: rgba(20, 33, 61, 0.2);
-  --accent: #2f6dc4;
-  --error-bg: #fdecea;
-  --error-border: #f2b9b2;
-  --error-text: #8b2e1f;
-  --shadow-sm: 0 12px 24px rgba(15, 23, 42, 0.06);
-  --shadow-md: 0 18px 40px rgba(15, 23, 42, 0.08);
-  --shadow-lg: 0 28px 60px rgba(15, 23, 42, 0.12);
+  --bg: #070b15;
+  --panel: rgba(11, 16, 31, 0.82);
+  --panel-highlight: rgba(16, 23, 43, 0.96);
+  --surface: rgba(16, 22, 40, 0.94);
+  --surface-muted: rgba(22, 30, 54, 0.92);
+  --text-main: #e7eefc;
+  --text-soft: #94a4c5;
+  --border: rgba(136, 159, 203, 0.16);
+  --border-strong: rgba(136, 159, 203, 0.28);
+  --accent: #4d92ff;
+  --error-bg: rgba(93, 26, 34, 0.42);
+  --error-border: rgba(255, 127, 127, 0.26);
+  --error-text: #ffb4b4;
+  --shadow-sm: 0 12px 24px rgba(0, 0, 0, 0.22);
+  --shadow-md: 0 18px 40px rgba(0, 0, 0, 0.32);
+  --shadow-lg: 0 28px 60px rgba(0, 0, 0, 0.42);
 }
 
 * {
@@ -42,7 +40,12 @@ body {
   min-width: 320px;
   min-height: 100vh;
   color: var(--text-main);
-  background: transparent;
+  background-color: transparent;
+  background-image:
+    linear-gradient(rgba(91, 110, 155, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(91, 110, 155, 0.08) 1px, transparent 1px);
+  background-size: 34px 34px;
+  background-attachment: fixed;
 }
 
 button,
@@ -70,6 +73,7 @@ h2,
 h3 {
   font-family: 'Aptos Display', 'Trebuchet MS', sans-serif;
   letter-spacing: -0.03em;
+  color: var(--text-main);
 }
 
 h1 {
