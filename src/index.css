@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Boldonse&family=Quicksand:wght@400;500;600;700&display=swap');
+
 :root {
   color: #e7eefc;
   background: #070b15;
@@ -11,20 +13,22 @@
 
   --bg: #070b15;
   --panel: rgba(11, 16, 31, 0.82);
-  --panel-highlight: rgba(16, 23, 43, 0.96);
-  --surface: rgba(16, 22, 40, 0.94);
-  --surface-muted: rgba(22, 30, 54, 0.92);
+  --panel-highlight: rgba(24, 35, 65, 0.98);
+  --surface: rgba(20, 29, 53, 0.96);
+  --surface-muted: rgba(34, 46, 78, 0.94);
   --text-main: #e7eefc;
   --text-soft: #94a4c5;
   --border: rgba(136, 159, 203, 0.16);
   --border-strong: rgba(136, 159, 203, 0.28);
-  --accent: #4d92ff;
+  --accent: #7cb1ff;
   --error-bg: rgba(93, 26, 34, 0.42);
   --error-border: rgba(255, 127, 127, 0.26);
   --error-text: #ffb4b4;
   --shadow-sm: 0 12px 24px rgba(0, 0, 0, 0.22);
   --shadow-md: 0 18px 40px rgba(0, 0, 0, 0.32);
   --shadow-lg: 0 28px 60px rgba(0, 0, 0, 0.42);
+  --font-display: 'Quicksand', 'Trebuchet MS', sans-serif;
+  --font-title: 'Boldonse', 'Trebuchet MS', sans-serif;
 }
 
 * {
@@ -71,7 +75,7 @@ p {
 h1,
 h2,
 h3 {
-  font-family: 'Aptos Display', 'Trebuchet MS', sans-serif;
+  font-family: var(--font-display);
   letter-spacing: -0.03em;
   color: var(--text-main);
 }

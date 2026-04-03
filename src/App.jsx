@@ -87,7 +87,6 @@ function getDueDateTone(dueDate) {
 
 function App() {
   const boardStageRef = useRef(null)
-  const [session, setSession] = useState(null)
   const [tasks, setTasks] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -118,7 +117,6 @@ function App() {
 
     try {
       const activeSession = await ensureGuestSession()
-      setSession(activeSession)
 
       const nextTasks = await fetchTasks()
       setTasks(nextTasks)
@@ -290,13 +288,11 @@ function App() {
         onPointerLeave={handleBoardStagePointerLeave}
       >
         <div className="board-stage__content">
+
           <section className="board-toolbar">
-            <div className="hero-panel__meta">
-              <span className="meta-chip">{tasks.length} tasks</span>
-              <span className="meta-chip meta-chip--muted">
-                Session {session?.user?.id?.slice(0, 8) ?? 'guest'}
-              </span>
-            </div>
+            <header className="app-header">
+              <h1>Spotlight.</h1>
+            </header>
 
             <button className="primary-button" type="button" onClick={handleOpenCreate}>
               New Task

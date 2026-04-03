@@ -29,11 +29,11 @@
   mask-image: radial-gradient(
     circle 300px at var(--spotlight-x) var(--spotlight-y),
     transparent 0,
-    transparent 52%,
+    transparent 32%,
     rgba(0, 0, 0, 0.78) 74%,
-    rgba(0, 0, 0, 1) 100%
+    rgba(0, 0, 0, 1) 80%
   );
-  opacity: 0.8;
+  opacity: 0.9;
 }
 
 .board-stage::after {
@@ -63,6 +63,17 @@
   z-index: 1;
 }
 
+.app-header {
+  padding-bottom: 18px;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-family: var(--font-title);
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  line-height: 1;
+}
+
 .board-toolbar {
   display: flex;
   justify-content: space-between;
@@ -71,11 +82,16 @@
   padding: 0 0 22px;
 }
 
+.board-toolbar .primary-button {
+  margin-left: auto;
+}
+
 .status-screen__eyebrow,
 .board-column__eyebrow,
 .modal__eyebrow {
   display: inline-flex;
   margin-bottom: 14px;
+  font-family: var(--font-display);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -107,6 +123,7 @@
   align-items: center;
   border-radius: 999px;
   padding: 6px 10px;
+  font-family: var(--font-display);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.01em;
@@ -137,10 +154,11 @@
 }
 
 .primary-button {
+  font-family: var(--font-display);
   padding: 14px 18px;
   background: var(--accent);
-  color: #081120;
-  box-shadow: 0 18px 35px rgba(29, 79, 158, 0.3);
+  color: #06101f;
+  box-shadow: 0 18px 35px rgba(124, 177, 255, 0.34);
 }
 
 .primary-button:hover,
@@ -157,6 +175,7 @@
 
 .icon-button {
   padding: 10px 12px;
+  font-family: var(--font-display);
   background: var(--surface-muted);
   color: var(--text-main);
 }
@@ -199,6 +218,7 @@
 .board-column--active {
   border-color: var(--accent);
   background: var(--panel-highlight);
+  box-shadow: 0 18px 44px rgba(64, 104, 175, 0.2);
   transform: translateY(-2px);
 }
 
@@ -237,7 +257,7 @@
   padding: 20px;
   text-align: center;
   color: var(--text-soft);
-  background: rgba(11, 16, 31, 0.54);
+  background: rgba(18, 27, 47, 0.64);
 }
 
 .empty-column p {
@@ -283,6 +303,15 @@
   margin-bottom: 14px;
 }
 
+.task-card__topline::after {
+  content: '';
+  display: block;
+  flex-basis: 100%;
+  height: 1px;
+  margin-top: 10px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
 .task-card h3 {
   margin: 0;
   font-size: 1rem;
@@ -300,18 +329,18 @@
 }
 
 .badge--priority-low {
-  background: rgba(38, 88, 58, 0.52);
-  color: #c6f7d8;
+  background: rgba(64, 151, 98, 0.86);
+  color: #e8fff0;
 }
 
 .badge--priority-normal {
-  background: rgba(33, 63, 116, 0.52);
-  color: #cfe2ff;
+  background: rgba(77, 146, 255, 0.78);
+  color: #f3f8ff;
 }
 
 .badge--priority-high {
-  background: rgba(123, 55, 36, 0.58);
-  color: #ffd8cd;
+  background: rgba(223, 103, 71, 0.8);
+  color: #fff3ee;
 }
 
 .badge--due-neutral {
@@ -320,21 +349,52 @@
 }
 
 .badge--due-soon {
-  background: rgba(119, 88, 19, 0.58);
-  color: #ffe6a6;
+  background: rgba(190, 145, 36, 0.78);
+  color: #fff4cf;
 }
 
 .badge--due-overdue {
-  background: rgba(121, 40, 40, 0.64);
-  color: #ffbeb9;
+  background: rgba(191, 66, 66, 0.8);
+  color: #ffe2df;
+}
+
+.task-card--priority-normal {
+  border-color: rgba(124, 177, 255, 0.72);
+  background-color: rgba(77, 146, 255, 0.3);
 }
 
 .task-card--priority-high {
-  border-color: rgba(180, 77, 39, 0.3);
+  border-color: rgba(255, 132, 98, 0.72);
+  background-color: rgba(223, 103, 71, 0.28);
 }
 
 .task-card--priority-low {
-  border-color: rgba(56, 138, 91, 0.28);
+  border-color: rgba(96, 220, 143, 0.68);
+  background-color: rgba(64, 151, 98, 0.28);
+}
+
+.task-card--priority-normal .task-card__topline::after {
+  background: rgba(160, 201, 255, 0.34);
+}
+
+.task-card--priority-high .task-card__topline::after {
+  background: rgba(255, 171, 148, 0.34);
+}
+
+.task-card--priority-low .task-card__topline::after {
+  background: rgba(152, 247, 191, 0.32);
+}
+
+.task-card--priority-normal h3 {
+  color: #f2f7ff;
+}
+
+.task-card--priority-high h3 {
+  color: #fff2ed;
+}
+
+.task-card--priority-low h3 {
+  color: #effff5;
 }
 
 .status-screen {
@@ -391,6 +451,7 @@
   flex-direction: column;
   gap: 8px;
   margin-bottom: 16px;
+  font-family: var(--font-display);
   font-size: 0.92rem;
   font-weight: 700;
   color: var(--text-main);
@@ -449,6 +510,11 @@
   .board-toolbar {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .board-toolbar .primary-button {
+    margin-left: 0;
+    align-self: flex-end;
   }
 
   .hero-panel__meta {
