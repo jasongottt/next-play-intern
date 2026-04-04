@@ -10,7 +10,6 @@ import {
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { useEffect, useRef, useState } from 'react'
-import Grainient from './components/Grainient'
 import { COLUMNS } from './constants/columns'
 import {
   createTask,
@@ -287,8 +286,8 @@ function App() {
         className="board-stage"
         onPointerMove={handleBoardStagePointerMove}
         onPointerLeave={handleBoardStagePointerLeave}
-      >        <div className="board-stage__content">
-
+      >
+        <div className="board-stage__content">
           <section className="board-toolbar">
             <header className="app-header">
               <h1>Spotlight.</h1>
