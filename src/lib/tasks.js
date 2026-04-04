@@ -122,3 +122,35 @@ export async function updateTaskStatus(taskId, status) {
 
   return data
 }
+
+export async function updateTask(taskId, input) {
+  const client = getSupabaseClient()
+  const payload = {
+    title: input.title.trim(),
+    description: input.description?.trim() || null,
+    priority: input.priority || 'normal',
+    due_date: input.due_date || null,
+  }
+
+  const { data, error } = await client
+    .from('tasks')
+    .update(payload)
+    .eq('id', taskId)
+    .select(TASK_FIELDS)
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  return data
+}
+
+export async function deleteTask(taskId) {
+  const client = getSupabaseClient()
+  const { error } = await client.from('tasks').delete().eq('id', taskId)
+
+  if (error) {
+    throw error
+  }
+}
