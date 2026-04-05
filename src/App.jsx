@@ -25,6 +25,12 @@ import {
   fetchTeamMembers,
   replaceTaskAssignees,
 } from './lib/team'
+import {
+  createLabel,
+  fetchLabels,
+  fetchTaskLabels,
+  replaceTaskLabels,
+} from './lib/labels'
 import { createTaskActivity, fetchTaskActivity } from './lib/activity'
 import { createTaskComment, fetchTaskComments } from './lib/comments'
 import './App.css'
@@ -50,6 +56,16 @@ const MEMBER_COLOR_OPTIONS = [
   { value: '#ff6fa8', label: 'Rose' },
 ]
 
+const LABEL_COLOR_OPTIONS = [
+  { value: '', label: 'Auto' },
+  { value: '#7cb1ff', label: 'Sky' },
+  { value: '#60dc8f', label: 'Mint' },
+  { value: '#df6747', label: 'Ember' },
+  { value: '#be9124', label: 'Gold' },
+  { value: '#8b7dff', label: 'Lilac' },
+  { value: '#ff6fa8', label: 'Rose' },
+]
+
 const EMPTY_FORM = {
   title: '',
   description: '',
@@ -58,6 +74,11 @@ const EMPTY_FORM = {
 }
 
 const EMPTY_MEMBER_FORM = {
+  name: '',
+  color: '',
+}
+
+const EMPTY_LABEL_FORM = {
   name: '',
   color: '',
 }
@@ -106,8 +127,12 @@ function filterTasks(tasks, filters) {
       : true
     const matchesPriority =
       filters.priority === 'all' ? true : task.priority === filters.priority
+    const matchesLabel =
+      filters.labelId === 'all'
+        ? true
+        : (filters.taskLabelMap[task.id] ?? []).includes(filters.labelId)
 
-    return matchesTitle && matchesPriority
+    return matchesTitle && matchesPriority && matchesLabel
   })
 }
 
@@ -172,6 +197,31 @@ function getDueDateTone(dueDate) {
   return 'neutral'
 }
 
+function getBoardStats(tasks) {
+  const today = new Date()
+  const startOfToday = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  )
+
+  const completed = tasks.filter((task) => task.status === 'done').length
+  const overdue = tasks.filter((task) => {
+    if (!task.due_date || task.status === 'done') {
+      return false
+    }
+
+    const dueDate = new Date(`${task.due_date}T00:00:00`)
+    return dueDate.getTime() < startOfToday.getTime()
+  }).length
+
+  return {
+    total: tasks.length,
+    completed,
+    overdue,
+  }
+}
+
 function getTaskFormState(task) {
   return {
     title: task.title ?? '',
@@ -198,6 +248,21 @@ function buildTaskAssignmentMap(assignments) {
 
 function getTaskAssigneeIds(taskId, taskAssignments) {
   return taskAssignments[taskId] ?? []
+}
+
+function buildTaskLabelMap(taskLabels) {
+  return taskLabels.reduce((map, taskLabel) => {
+    if (!map[taskLabel.task_id]) {
+      map[taskLabel.task_id] = []
+    }
+
+    map[taskLabel.task_id].push(taskLabel.label_id)
+    return map
+  }, {})
+}
+
+function getTaskLabelIds(taskId, taskLabelMap) {
+  return taskLabelMap[taskId] ?? []
 }
 
 function areIdListsEqual(left, right) {
@@ -241,6 +306,18 @@ function getMemberColor(member) {
   const fallbackPalette = MEMBER_COLOR_OPTIONS.filter((option) => option.value)
   const paletteIndex =
     Math.abs(hashString(member.id || member.name || 'member')) % fallbackPalette.length
+
+  return fallbackPalette[paletteIndex].value
+}
+
+function getLabelColor(label) {
+  if (label.color) {
+    return label.color
+  }
+
+  const fallbackPalette = LABEL_COLOR_OPTIONS.filter((option) => option.value)
+  const paletteIndex =
+    Math.abs(hashString(label.id || label.name || 'label')) % fallbackPalette.length
 
   return fallbackPalette[paletteIndex].value
 }
@@ -321,16 +398,56 @@ function buildAssignmentActivityMessage(previousMemberIds, nextMemberIds, teamMe
   return `Updated assignees: ${changes.join('; ')}`
 }
 
+function buildLabelActivityMessage(previousLabelIds, nextLabelIds, labelsById) {
+  if (areIdListsEqual(previousLabelIds, nextLabelIds)) {
+    return null
+  }
+
+  const addedNames = nextLabelIds
+    .filter((labelId) => !previousLabelIds.includes(labelId))
+    .map((labelId) => labelsById[labelId]?.name)
+    .filter(Boolean)
+
+  const removedNames = previousLabelIds
+    .filter((labelId) => !nextLabelIds.includes(labelId))
+    .map((labelId) => labelsById[labelId]?.name)
+    .filter(Boolean)
+
+  if (!nextLabelIds.length) {
+    return 'Cleared all labels'
+  }
+
+  if (!previousLabelIds.length && addedNames.length) {
+    return `Added labels: ${joinLabelList(addedNames)}`
+  }
+
+  const changes = []
+
+  if (addedNames.length) {
+    changes.push(`added ${joinLabelList(addedNames)}`)
+  }
+
+  if (removedNames.length) {
+    changes.push(`removed ${joinLabelList(removedNames)}`)
+  }
+
+  return `Updated labels: ${changes.join('; ')}`
+}
+
 function App() {
   const boardStageRef = useRef(null)
   const [tasks, setTasks] = useState([])
   const [teamMembers, setTeamMembers] = useState([])
+  const [labels, setLabels] = useState([])
   const [taskAssignments, setTaskAssignments] = useState({})
+  const [taskLabelMap, setTaskLabelMap] = useState({})
   const [isLoading, setIsLoading] = useState(true)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isTeamOpen, setIsTeamOpen] = useState(false)
+  const [isLabelsOpen, setIsLabelsOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [isCreatingMember, setIsCreatingMember] = useState(false)
+  const [isCreatingLabel, setIsCreatingLabel] = useState(false)
   const [isActivityLoading, setIsActivityLoading] = useState(false)
   const [isCommentsLoading, setIsCommentsLoading] = useState(false)
   const [isCreatingComment, setIsCreatingComment] = useState(false)
@@ -338,6 +455,7 @@ function App() {
   const [boardError, setBoardError] = useState('')
   const [createError, setCreateError] = useState('')
   const [memberError, setMemberError] = useState('')
+  const [labelError, setLabelError] = useState('')
   const [detailError, setDetailError] = useState('')
   const [activityError, setActivityError] = useState('')
   const [commentsError, setCommentsError] = useState('')
@@ -346,16 +464,20 @@ function App() {
   const [isDetailEditing, setIsDetailEditing] = useState(false)
   const [isSavingTask, setIsSavingTask] = useState(false)
   const [isDeletingTask, setIsDeletingTask] = useState(false)
+  const [isSpotlightEnabled, setIsSpotlightEnabled] = useState(true)
   const [formState, setFormState] = useState(EMPTY_FORM)
   const [detailFormState, setDetailFormState] = useState(EMPTY_FORM)
   const [memberFormState, setMemberFormState] = useState(EMPTY_MEMBER_FORM)
+  const [labelFormState, setLabelFormState] = useState(EMPTY_LABEL_FORM)
   const [commentFormState, setCommentFormState] = useState(EMPTY_COMMENT_FORM)
   const [taskActivity, setTaskActivity] = useState([])
   const [taskComments, setTaskComments] = useState([])
   const [selectedAssigneeIds, setSelectedAssigneeIds] = useState([])
+  const [selectedLabelIds, setSelectedLabelIds] = useState([])
   const [filters, setFilters] = useState({
     searchQuery: '',
     priority: 'all',
+    labelId: 'all',
   })
 
   const sensors = useSensors(
@@ -366,7 +488,12 @@ function App() {
     }),
   )
 
-  const filteredTasks = filterTasks(tasks, filters)
+  const labelsById = Object.fromEntries(labels.map((label) => [label.id, label]))
+  const filteredTasks = filterTasks(tasks, {
+    ...filters,
+    taskLabelMap,
+  })
+  const boardStats = getBoardStats(filteredTasks)
   const tasksByColumn = groupTasks(filteredTasks)
   const activeTask = tasks.find((task) => task.id === activeTaskId) ?? null
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null
@@ -374,11 +501,19 @@ function App() {
   const selectedTaskAssigneeIds = selectedTask
     ? getTaskAssigneeIds(selectedTask.id, taskAssignments)
     : []
+  const selectedTaskLabelIds = selectedTask
+    ? getTaskLabelIds(selectedTask.id, taskLabelMap)
+    : []
   const selectedTaskAssignees = selectedTaskAssigneeIds
     .map((memberId) => teamMembersById[memberId])
     .filter(Boolean)
+  const selectedTaskLabels = selectedTaskLabelIds
+    .map((labelId) => labelsById[labelId])
+    .filter(Boolean)
   const hasActiveFilters =
-    filters.searchQuery.trim().length > 0 || filters.priority !== 'all'
+    filters.searchQuery.trim().length > 0 ||
+    filters.priority !== 'all' ||
+    filters.labelId !== 'all'
 
   useEffect(() => {
     initializeBoard()
@@ -407,6 +542,15 @@ function App() {
 
     setSelectedAssigneeIds(getTaskAssigneeIds(selectedTaskId, taskAssignments))
   }, [selectedTaskId, taskAssignments])
+
+  useEffect(() => {
+    if (!selectedTaskId) {
+      setSelectedLabelIds([])
+      return
+    }
+
+    setSelectedLabelIds(getTaskLabelIds(selectedTaskId, taskLabelMap))
+  }, [selectedTaskId, taskLabelMap])
 
   useEffect(() => {
     if (!selectedTaskId) {
@@ -485,6 +629,16 @@ function App() {
     }
   }, [selectedTaskId])
 
+  useEffect(() => {
+    const stage = boardStageRef.current
+
+    if (!stage || isSpotlightEnabled) {
+      return
+    }
+
+    stage.style.setProperty('--spotlight-opacity', '0')
+  }, [isSpotlightEnabled])
+
   async function initializeBoard() {
     setIsLoading(true)
     setAppError('')
@@ -492,15 +646,20 @@ function App() {
     try {
       await ensureGuestSession()
 
-      const [nextTasks, nextMembers, nextAssignments] = await Promise.all([
+      const [nextTasks, nextMembers, nextAssignments, nextLabels, nextTaskLabels] =
+        await Promise.all([
         fetchTasks(),
         fetchTeamMembers(),
         fetchTaskAssignees(),
+        fetchLabels(),
+        fetchTaskLabels(),
       ])
 
       setTasks(nextTasks)
       setTeamMembers(nextMembers)
       setTaskAssignments(buildTaskAssignmentMap(nextAssignments))
+      setLabels(nextLabels)
+      setTaskLabelMap(buildTaskLabelMap(nextTaskLabels))
     } catch (error) {
       setAppError(error.message || 'Unable to load your task board.')
     } finally {
@@ -517,6 +676,11 @@ function App() {
   function handleOpenTeam() {
     setMemberError('')
     setIsTeamOpen(true)
+  }
+
+  function handleOpenLabels() {
+    setLabelError('')
+    setIsLabelsOpen(true)
   }
 
   function handleCloseCreate() {
@@ -539,6 +703,16 @@ function App() {
     setIsTeamOpen(false)
   }
 
+  function handleCloseLabels() {
+    if (isCreatingLabel) {
+      return
+    }
+
+    setLabelError('')
+    setLabelFormState(EMPTY_LABEL_FORM)
+    setIsLabelsOpen(false)
+  }
+
   function handleFieldChange(event) {
     const { name, value } = event.target
     setFormState((current) => ({
@@ -558,6 +732,14 @@ function App() {
   function handleMemberFieldChange(event) {
     const { name, value } = event.target
     setMemberFormState((current) => ({
+      ...current,
+      [name]: value,
+    }))
+  }
+
+  function handleLabelFieldChange(event) {
+    const { name, value } = event.target
+    setLabelFormState((current) => ({
       ...current,
       [name]: value,
     }))
@@ -593,6 +775,18 @@ function App() {
         ? current.filter((value) => value !== memberId)
         : [...current, memberId],
     )
+  }
+
+  function handleToggleLabel(labelId) {
+    setSelectedLabelIds((current) =>
+      current.includes(labelId)
+        ? current.filter((value) => value !== labelId)
+        : [...current, labelId],
+    )
+  }
+
+  function handleToggleSpotlight() {
+    setIsSpotlightEnabled((current) => !current)
   }
 
   async function recordTaskActivity(taskId, eventType, message) {
@@ -667,6 +861,34 @@ function App() {
     }
   }
 
+  async function handleCreateLabel(event) {
+    event.preventDefault()
+
+    const name = labelFormState.name.trim()
+
+    if (!name) {
+      setLabelError('A label name is required.')
+      return
+    }
+
+    setIsCreatingLabel(true)
+    setLabelError('')
+
+    try {
+      const nextLabel = await createLabel({
+        name,
+        color: labelFormState.color,
+      })
+
+      setLabels((current) => [...current, nextLabel])
+      setLabelFormState(EMPTY_LABEL_FORM)
+    } catch (error) {
+      setLabelError(error.message || 'Unable to add that label right now.')
+    } finally {
+      setIsCreatingLabel(false)
+    }
+  }
+
   async function handleCreateComment(event) {
     event.preventDefault()
 
@@ -704,6 +926,7 @@ function App() {
     setSelectedTaskId(task.id)
     setDetailFormState(getTaskFormState(task))
     setSelectedAssigneeIds(getTaskAssigneeIds(task.id, taskAssignments))
+    setSelectedLabelIds(getTaskLabelIds(task.id, taskLabelMap))
     setCommentFormState(EMPTY_COMMENT_FORM)
     setIsDetailEditing(false)
   }
@@ -719,6 +942,7 @@ function App() {
     setSelectedTaskId(null)
     setDetailFormState(EMPTY_FORM)
     setSelectedAssigneeIds([])
+    setSelectedLabelIds([])
     setCommentFormState(EMPTY_COMMENT_FORM)
     setTaskActivity([])
     setTaskComments([])
@@ -733,6 +957,7 @@ function App() {
     setDetailError('')
     setDetailFormState(getTaskFormState(selectedTask))
     setSelectedAssigneeIds(getTaskAssigneeIds(selectedTask.id, taskAssignments))
+    setSelectedLabelIds(getTaskLabelIds(selectedTask.id, taskLabelMap))
     setIsDetailEditing(true)
   }
 
@@ -744,6 +969,7 @@ function App() {
     setDetailError('')
     setDetailFormState(getTaskFormState(selectedTask))
     setSelectedAssigneeIds(getTaskAssigneeIds(selectedTask.id, taskAssignments))
+    setSelectedLabelIds(getTaskLabelIds(selectedTask.id, taskLabelMap))
     setIsDetailEditing(false)
   }
 
@@ -767,6 +993,7 @@ function App() {
     try {
       const previousTask = selectedTask
       const previousAssigneeIds = selectedTaskAssigneeIds
+      const previousLabelIds = selectedTaskLabelIds
       const updatedTask = await updateTask(selectedTask.id, {
         title,
         description: detailFormState.description,
@@ -779,6 +1006,7 @@ function App() {
       )
 
       await replaceTaskAssignees(selectedTask.id, selectedAssigneeIds)
+      await replaceTaskLabels(selectedTask.id, selectedLabelIds)
 
       setTaskAssignments((current) => {
         const nextAssignments = { ...current }
@@ -792,6 +1020,18 @@ function App() {
         return nextAssignments
       })
 
+      setTaskLabelMap((current) => {
+        const nextTaskLabels = { ...current }
+
+        if (selectedLabelIds.length) {
+          nextTaskLabels[selectedTask.id] = selectedLabelIds
+        } else {
+          delete nextTaskLabels[selectedTask.id]
+        }
+
+        return nextTaskLabels
+      })
+
       setDetailFormState(getTaskFormState(updatedTask))
       setIsDetailEditing(false)
 
@@ -800,6 +1040,11 @@ function App() {
         previousAssigneeIds,
         selectedAssigneeIds,
         teamMembersById,
+      )
+      const labelMessage = buildLabelActivityMessage(
+        previousLabelIds,
+        selectedLabelIds,
+        labelsById,
       )
 
       if (editMessage) {
@@ -812,6 +1057,10 @@ function App() {
           'task_assignments_updated',
           assignmentMessage,
         )
+      }
+
+      if (labelMessage) {
+        await recordTaskActivity(selectedTask.id, 'task_labels_updated', labelMessage)
       }
     } catch (error) {
       setDetailError(error.message || 'Unable to save this task right now.')
@@ -909,7 +1158,7 @@ function App() {
   function handleBoardStagePointerMove(event) {
     const stage = boardStageRef.current
 
-    if (!stage) {
+    if (!stage || !isSpotlightEnabled) {
       return
     }
 
@@ -925,7 +1174,7 @@ function App() {
   function handleBoardStagePointerLeave() {
     const stage = boardStageRef.current
 
-    if (!stage) {
+    if (!stage || !isSpotlightEnabled) {
       return
     }
 
@@ -963,19 +1212,39 @@ function App() {
     <main className="app-shell">
       <section
         ref={boardStageRef}
-        className="board-stage"
+        className={[
+          'board-stage',
+          isSpotlightEnabled ? '' : 'board-stage--spotlight-off',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         onPointerMove={handleBoardStagePointerMove}
         onPointerLeave={handleBoardStagePointerLeave}
       >
         <div className="board-stage__content">
           <section className="board-toolbar">
-            <header className="app-header">
-              <h1>Spotlight.</h1>
-            </header>
+            <BoardHero
+              labelCount={labels.length}
+              stats={boardStats}
+              teamCount={teamMembers.length}
+              totalTasks={tasks.length}
+              isFiltered={hasActiveFilters}
+            />
 
             <div className="board-toolbar__actions">
+              <button
+                className={`icon-button ${isSpotlightEnabled ? 'icon-button--active' : ''}`}
+                type="button"
+                onClick={handleToggleSpotlight}
+                aria-pressed={isSpotlightEnabled}
+              >
+                Spotlight {isSpotlightEnabled ? 'On' : 'Off'}
+              </button>
               <button className="icon-button" type="button" onClick={handleOpenTeam}>
                 Manage Team
+              </button>
+              <button className="icon-button" type="button" onClick={handleOpenLabels}>
+                Manage Labels
               </button>
               <button className="primary-button" type="button" onClick={handleOpenCreate}>
                 New Task
@@ -1006,6 +1275,18 @@ function App() {
                   {PRIORITY_FILTER_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="board-filters__select">
+                <span>Label</span>
+                <select name="labelId" value={filters.labelId} onChange={handleFilterChange}>
+                  <option value="all">All labels</option>
+                  {labels.map((label) => (
+                    <option key={label.id} value={label.id}>
+                      {label.name}
                     </option>
                   ))}
                 </select>
@@ -1051,6 +1332,8 @@ function App() {
                   hasActiveFilters={hasActiveFilters}
                   selectedTaskId={selectedTaskId}
                   taskAssignments={taskAssignments}
+                  taskLabelMap={taskLabelMap}
+                  labelsById={labelsById}
                   teamMembersById={teamMembersById}
                   onOpenTask={handleOpenDetails}
                 />
@@ -1060,6 +1343,9 @@ function App() {
             <DragOverlay>
               {activeTask ? (
                 <TaskPreviewCard
+                  labels={getTaskLabelIds(activeTask.id, taskLabelMap)
+                    .map((labelId) => labelsById[labelId])
+                    .filter(Boolean)}
                   task={activeTask}
                   assignees={getTaskAssigneeIds(activeTask.id, taskAssignments)
                     .map((memberId) => teamMembersById[memberId])
@@ -1094,11 +1380,24 @@ function App() {
         />
       ) : null}
 
+      {isLabelsOpen ? (
+        <LabelsModal
+          errorMessage={labelError}
+          formState={labelFormState}
+          isCreating={isCreatingLabel}
+          labels={labels}
+          onChange={handleLabelFieldChange}
+          onClose={handleCloseLabels}
+          onSubmit={handleCreateLabel}
+        />
+      ) : null}
+
       {selectedTask ? (
         <TaskDetailsModal
           activity={taskActivity}
           activityError={activityError}
           assignees={selectedTaskAssignees}
+          labels={selectedTaskLabels}
           commentFormState={commentFormState}
           comments={taskComments}
           commentsError={commentsError}
@@ -1110,7 +1409,9 @@ function App() {
           isDeleting={isDeletingTask}
           isEditing={isDetailEditing}
           isSaving={isSavingTask}
+          labelOptions={labels}
           memberOptions={teamMembers}
+          selectedLabelIds={selectedLabelIds}
           selectedAssigneeIds={selectedAssigneeIds}
           task={selectedTask}
           onChange={handleDetailFieldChange}
@@ -1120,6 +1421,8 @@ function App() {
           onCancelEdit={handleCancelEditing}
           onCommentChange={handleCommentFieldChange}
           onCreateComment={handleCreateComment}
+          onLabelToggle={handleToggleLabel}
+          onOpenLabels={handleOpenLabels}
           onToggleAssignee={handleToggleAssignee}
           onOpenTeam={handleOpenTeam}
           onSubmit={handleSaveTask}
@@ -1136,6 +1439,8 @@ function BoardColumn({
   hasActiveFilters,
   selectedTaskId,
   taskAssignments,
+  taskLabelMap,
+  labelsById,
   teamMembersById,
   onOpenTask,
 }) {
@@ -1164,6 +1469,9 @@ function BoardColumn({
               assignees={getTaskAssigneeIds(task.id, taskAssignments)
                 .map((memberId) => teamMembersById[memberId])
                 .filter(Boolean)}
+              labels={getTaskLabelIds(task.id, taskLabelMap)
+                .map((labelId) => labelsById[labelId])
+                .filter(Boolean)}
               task={task}
               isGhosted={activeTaskId === task.id}
               isSelected={selectedTaskId === task.id}
@@ -1175,7 +1483,7 @@ function BoardColumn({
             <p>{hasActiveFilters ? 'No matching tasks.' : 'No tasks here yet.'}</p>
             <span>
               {hasActiveFilters
-                ? 'Try a different title or priority filter.'
+                ? 'Try a different search, priority, or label filter.'
                 : 'Drop a task here or create a new one.'}
             </span>
           </div>
@@ -1185,7 +1493,56 @@ function BoardColumn({
   )
 }
 
-function TaskCard({ assignees, task, isGhosted = false, isSelected = false, onOpen }) {
+function BoardHero({ labelCount, stats, teamCount, totalTasks, isFiltered }) {
+  return (
+    <header className="app-header">
+      <div className="app-header__main">
+        <div className="app-header__title-group">
+          <h1>Spotlight.</h1>
+        </div>
+      </div>
+
+      <div className="app-header__support">
+        <div className="hero-panel__meta" aria-label="Board overview">
+          <span className="meta-chip">{totalTasks} tasks</span>
+          <span className="meta-chip">{teamCount} team members</span>
+          <span className="meta-chip">{labelCount} labels</span>
+        </div>
+        <BoardSummary stats={stats} isFiltered={isFiltered} />
+      </div>
+    </header>
+  )
+}
+
+function BoardSummary({ stats, isFiltered }) {
+  return (
+    <section className="board-summary" aria-label="Board summary">
+      <div className="board-summary__stats">
+        <article className="board-summary__card">
+          <span className="board-summary__label">Total Tasks</span>
+          <strong>{stats.total}</strong>
+        </article>
+        <article className="board-summary__card">
+          <span className="board-summary__label">Completed</span>
+          <strong>{stats.completed}</strong>
+        </article>
+        <article className="board-summary__card board-summary__card--warning">
+          <span className="board-summary__label">Overdue</span>
+          <strong>{stats.overdue}</strong>
+        </article>
+      </div>
+    </section>
+  )
+}
+
+function TaskCard({
+  assignees,
+  labels,
+  task,
+  isGhosted = false,
+  isSelected = false,
+  onOpen,
+}) {
   const {
     attributes,
     listeners,
@@ -1224,6 +1581,7 @@ function TaskCard({ assignees, task, isGhosted = false, isSelected = false, onOp
     >
       <TaskCardContent
         assignees={assignees}
+        labels={labels}
         task={task}
         dueLabel={dueLabel}
         dueTone={dueTone}
@@ -1232,7 +1590,7 @@ function TaskCard({ assignees, task, isGhosted = false, isSelected = false, onOp
   )
 }
 
-function TaskPreviewCard({ assignees, task }) {
+function TaskPreviewCard({ assignees, labels, task }) {
   const dueTone = getDueDateTone(task.due_date)
   const dueLabel = formatDueDate(task.due_date)
 
@@ -1240,6 +1598,7 @@ function TaskPreviewCard({ assignees, task }) {
     <article className="task-card task-card--overlay">
       <TaskCardContent
         assignees={assignees}
+        labels={labels}
         task={task}
         dueLabel={dueLabel}
         dueTone={dueTone}
@@ -1248,24 +1607,34 @@ function TaskPreviewCard({ assignees, task }) {
   )
 }
 
-function TaskCardContent({ assignees, task, dueLabel, dueTone }) {
+function TaskCardContent({ assignees, labels, task, dueLabel, dueTone }) {
   return (
     <>
-      <div className="task-card__topline">
         <span className={`badge badge--priority-${task.priority}`}>
           {task.priority}
         </span>
         {dueLabel ? (
           <span className={`badge badge--due-${dueTone}`}>Due {dueLabel}</span>
         ) : null}
-      </div>
 
       <h3>{task.title}</h3>
 
       {task.description ? <p>{task.description}</p> : null}
 
+      {labels.length ? <TaskLabelList labels={labels} /> : null}
+
       {assignees.length ? <TaskAssigneeSummary assignees={assignees} /> : null}
     </>
+  )
+}
+
+function TaskLabelList({ labels }) {
+  return (
+    <div className="task-card__labels">
+      {labels.map((label) => (
+        <LabelChip key={label.id} label={label} />
+      ))}
+    </div>
   )
 }
 
@@ -1444,10 +1813,160 @@ function TeamModal({
   )
 }
 
+function LabelsModal({
+  errorMessage,
+  formState,
+  isCreating,
+  labels,
+  onChange,
+  onClose,
+  onSubmit,
+}) {
+  return (
+    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+      <section
+        className="modal team-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="labels-modal-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="modal__header">
+          <div>
+            <span className="modal__eyebrow">Custom tags</span>
+            <h2 id="labels-modal-title">Manage labels</h2>
+          </div>
+
+          <button
+            className="icon-button"
+            type="button"
+            onClick={onClose}
+            disabled={isCreating}
+          >
+            Close
+          </button>
+        </div>
+
+        {errorMessage ? (
+          <div className="banner banner--error" role="alert">
+            {errorMessage}
+          </div>
+        ) : null}
+
+        <div className="team-modal__body">
+          <section className="detail-panel">
+            <span className="detail-panel__label">Current labels</span>
+            {labels.length ? (
+              <div className="labels-list">
+                {labels.map((label) => (
+                  <div key={label.id} className="label-list-item">
+                    <LabelChip label={label} />
+                    <span>Added {formatDateTime(label.created_at)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="detail-panel__empty">No labels yet.</p>
+            )}
+          </section>
+
+          <form className="task-form" onSubmit={onSubmit}>
+            <div className="task-form__grid">
+              <label>
+                Name
+                <input
+                  name="name"
+                  type="text"
+                  value={formState.name}
+                  onChange={onChange}
+                  placeholder="Design"
+                  maxLength={60}
+                  required
+                />
+              </label>
+
+              <label>
+                Label color
+                <select name="color" value={formState.color} onChange={onChange}>
+                  {LABEL_COLOR_OPTIONS.map((option) => (
+                    <option key={option.label} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="task-form__footer">
+              <p>Use labels to group work like bugs, features, or design tasks.</p>
+              <button className="primary-button" type="submit" disabled={isCreating}>
+                {isCreating ? 'Adding...' : 'Add Label'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function DetailPanel({ label, meta, children }) {
+  return (
+    <section className="detail-panel">
+      {label || meta ? (
+        <div className="detail-panel__header">
+          {label ? <span className="detail-panel__label">{label}</span> : <span />}
+          {meta ? <span className="detail-panel__meta">{meta}</span> : null}
+        </div>
+      ) : null}
+      {children}
+    </section>
+  )
+}
+
+function DetailEmptyState({ actionLabel, message, onAction }) {
+  return (
+    <div className="detail-panel__empty-state">
+      <p className="detail-panel__empty">{message}</p>
+      {actionLabel && onAction ? (
+        <button className="icon-button" type="button" onClick={onAction}>
+          {actionLabel}
+        </button>
+      ) : null}
+    </div>
+  )
+}
+
+function DetailInfoState({ description, title }) {
+  return (
+    <div className="comments-state">
+      <p>{title}</p>
+      {description ? <span>{description}</span> : null}
+    </div>
+  )
+}
+
+function DetailFact({ actionLabel, children, label, onAction }) {
+  return (
+    <article className="detail-fact">
+      <div className="detail-fact__header">
+        <span className="detail-fact__label">{label}</span>
+        {actionLabel && onAction ? (
+          <button className="detail-fact__action" type="button" onClick={onAction}>
+            {actionLabel}
+          </button>
+        ) : null}
+      </div>
+      <div className="detail-fact__content">{children}</div>
+    </article>
+  )
+}
+
 function TaskDetailsModal({
   activity,
   activityError,
   assignees,
+  labels,
   commentFormState,
   comments,
   commentsError,
@@ -1459,7 +1978,9 @@ function TaskDetailsModal({
   isDeleting,
   isEditing,
   isSaving,
+  labelOptions,
   memberOptions,
+  selectedLabelIds,
   selectedAssigneeIds,
   task,
   onChange,
@@ -1469,6 +1990,8 @@ function TaskDetailsModal({
   onCancelEdit,
   onCommentChange,
   onCreateComment,
+  onLabelToggle,
+  onOpenLabels,
   onToggleAssignee,
   onOpenTeam,
   onSubmit,
@@ -1488,7 +2011,6 @@ function TaskDetailsModal({
         <div className="modal__header">
           <div>
             <span className="modal__eyebrow">Task details</span>
-            <h2 id="task-details-title">{isEditing ? 'Edit task' : task.title}</h2>
           </div>
 
           <button
@@ -1511,45 +2033,78 @@ function TaskDetailsModal({
           <form className="task-form" onSubmit={onSubmit}>
             <TaskFormFields formState={formState} onChange={onChange} />
 
-            <section className="detail-panel">
-              <span className="detail-panel__label">Assignees</span>
-              {memberOptions.length ? (
-                <div className="member-picker">
-                  {memberOptions.map((member) => {
-                    const isSelected = selectedAssigneeIds.includes(member.id)
+            <div className="detail-modal__editor-grid">
+              <DetailPanel label="Assignees">
+                {memberOptions.length ? (
+                  <div className="member-picker">
+                    {memberOptions.map((member) => {
+                      const isSelected = selectedAssigneeIds.includes(member.id)
 
-                    return (
-                      <label
-                        key={member.id}
-                        className={[
-                          'member-picker__item',
-                          isSelected ? 'member-picker__item--selected' : '',
-                        ]
-                          .filter(Boolean)
-                          .join(' ')}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => onToggleAssignee(member.id)}
-                        />
-                        <AssigneeAvatar member={member} size="small" />
-                        <span>{member.name}</span>
-                      </label>
-                    )
-                  })}
-                </div>
-              ) : (
-                <div className="detail-panel__empty-state">
-                  <p className="detail-panel__empty">
-                    Create team members before assigning work.
-                  </p>
-                  <button className="icon-button" type="button" onClick={onOpenTeam}>
-                    Manage Team
-                  </button>
-                </div>
-              )}
-            </section>
+                      return (
+                        <label
+                          key={member.id}
+                          className={[
+                            'member-picker__item',
+                            isSelected ? 'member-picker__item--selected' : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => onToggleAssignee(member.id)}
+                          />
+                          <AssigneeAvatar member={member} size="small" />
+                          <span>{member.name}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <DetailEmptyState
+                    actionLabel="Manage Team"
+                    message="Create team members before assigning work."
+                    onAction={onOpenTeam}
+                  />
+                )}
+              </DetailPanel>
+
+              <DetailPanel label="Labels">
+                {labelOptions.length ? (
+                  <div className="label-picker">
+                    {labelOptions.map((label) => {
+                      const isSelected = selectedLabelIds.includes(label.id)
+
+                      return (
+                        <label
+                          key={label.id}
+                          className={[
+                            'label-picker__item',
+                            isSelected ? 'label-picker__item--selected' : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => onLabelToggle(label.id)}
+                          />
+                          <LabelChip label={label} />
+                        </label>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <DetailEmptyState
+                    actionLabel="Manage Labels"
+                    message="Create labels before tagging tasks."
+                    onAction={onOpenLabels}
+                  />
+                )}
+              </DetailPanel>
+            </div>
 
             <div className="task-form__footer task-form__footer--actions">
               <button
@@ -1567,63 +2122,73 @@ function TaskDetailsModal({
           </form>
         ) : (
           <div className="detail-modal__content">
-            <div className="detail-modal__meta">
-              <span className={`badge badge--priority-${task.priority}`}>
-                {task.priority}
-              </span>
-              <span className="badge badge--status">{getColumnTitle(task.status)}</span>
-              {dueLabel ? (
-                <span className={`badge badge--due-${dueTone}`}>Due {dueLabel}</span>
-              ) : (
-                <span className="badge badge--due-neutral">No due date</span>
-              )}
+            <section className="detail-modal__hero">
+              <div className="detail-modal__meta">
+                <span className={`badge badge--priority-${task.priority}`}>
+                  {task.priority}
+                </span>
+                <span className="badge badge--status">{getColumnTitle(task.status)}</span>
+                {dueLabel ? (
+                  <span className={`badge badge--due-${dueTone}`}>Due {dueLabel}</span>
+                ) : (
+                  <span className="badge badge--due-neutral">No due date</span>
+                )}
+              </div>
+              <h3 className="detail-modal__title">{task.title}</h3>
+              <p className="detail-modal__subtitle">
+                {task.description?.trim()
+                  ? task.description
+                  : 'Add more detail to explain the goal, context, or acceptance criteria.'}
+              </p>
+            </section>
+
+            <div className="detail-facts">
+              <DetailFact
+                label="Assignees"
+                actionLabel={!assignees.length ? 'Manage Team' : null}
+                onAction={!assignees.length ? onOpenTeam : undefined}
+              >
+                {assignees.length ? (
+                  <>
+                    <div className="detail-fact__avatars">
+                      {assignees.map((member) => (
+                        <AssigneeAvatar key={member.id} member={member} size="small" />
+                      ))}
+                    </div>
+                    <p className="detail-fact__text">
+                      {joinLabelList(assignees.map((member) => member.name))}
+                    </p>
+                  </>
+                ) : (
+                  <p className="detail-fact__empty">No assignees yet.</p>
+                )}
+              </DetailFact>
+
+              <DetailFact
+                label="Labels"
+                actionLabel={!labels.length ? 'Manage Labels' : null}
+                onAction={!labels.length ? onOpenLabels : undefined}
+              >
+                {labels.length ? (
+                  <div className="detail-panel__labels">
+                    {labels.map((label) => (
+                      <LabelChip key={label.id} label={label} />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="detail-fact__empty">No labels yet.</p>
+                )}
+              </DetailFact>
+
+              <DetailFact label="Created">
+                <p className="detail-fact__text">{formatDateTime(task.created_at)}</p>
+              </DetailFact>
             </div>
 
-            <section className="detail-panel">
-              <span className="detail-panel__label">Description</span>
-              {task.description ? (
-                <p>{task.description}</p>
-              ) : (
-                <p className="detail-panel__empty">No description added yet.</p>
-              )}
-            </section>
-
-            <section className="detail-panel">
-              <span className="detail-panel__label">Assignees</span>
-              {assignees.length ? (
-                <div className="detail-panel__assignees">
-                  {assignees.map((member) => (
-                    <div key={member.id} className="team-member">
-                      <AssigneeAvatar member={member} />
-                      <div>
-                        <p>{member.name}</p>
-                        <span>Assigned to this task</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="detail-panel__empty-state">
-                  <p className="detail-panel__empty">No assignees yet.</p>
-                  <button className="icon-button" type="button" onClick={onOpenTeam}>
-                    Manage Team
-                  </button>
-                </div>
-              )}
-            </section>
-
-            <section className="detail-panel">
-              <span className="detail-panel__label">Created</span>
-              <p>{formatDateTime(task.created_at)}</p>
-            </section>
-
-            <section className="detail-panel">
-              <div className="detail-panel__header">
-                <span className="detail-panel__label">Activity</span>
-                <span className="detail-panel__meta">
-                  {activity.length} event{activity.length === 1 ? '' : 's'}
-                </span>
-              </div>
+            <DetailPanel
+              label="Activity"
+              meta={`${activity.length} event${activity.length === 1 ? '' : 's'}`}
+            >
 
               {activityError ? (
                 <div className="banner banner--error" role="alert">
@@ -1632,9 +2197,7 @@ function TaskDetailsModal({
               ) : null}
 
               {isActivityLoading ? (
-                <div className="comments-state">
-                  <p>Loading activity...</p>
-                </div>
+                <DetailInfoState title="Loading activity..." />
               ) : activity.length ? (
                 <div className="activity-list">
                   {activity.map((entry) => (
@@ -1643,7 +2206,10 @@ function TaskDetailsModal({
                       <div className="activity-item__content">
                         <div className="activity-item__header">
                           <p className="activity-item__message">{entry.message}</p>
-                          <time dateTime={entry.created_at} title={formatDateTime(entry.created_at)}>
+                          <time
+                            dateTime={entry.created_at}
+                            title={formatDateTime(entry.created_at)}
+                          >
                             {formatRelativeTime(entry.created_at)}
                           </time>
                         </div>
@@ -1655,20 +2221,17 @@ function TaskDetailsModal({
                   ))}
                 </div>
               ) : (
-                <div className="comments-state">
-                  <p>No activity yet.</p>
-                  <span>Status moves, edits, assignments, and comments will appear here.</span>
-                </div>
+                <DetailInfoState
+                  title="No activity yet."
+                  description="Status moves, edits, assignments, and comments will appear here."
+                />
               )}
-            </section>
+            </DetailPanel>
 
-            <section className="detail-panel">
-              <div className="detail-panel__header">
-                <span className="detail-panel__label">Comments</span>
-                <span className="detail-panel__meta">
-                  {comments.length} comment{comments.length === 1 ? '' : 's'}
-                </span>
-              </div>
+            <DetailPanel
+              label="Comments"
+              meta={`${comments.length} comment${comments.length === 1 ? '' : 's'}`}
+            >
 
               <form className="comment-form" onSubmit={onCreateComment}>
                 <label className="comment-form__field">
@@ -1684,7 +2247,6 @@ function TaskDetailsModal({
                 </label>
 
                 <div className="comment-form__footer">
-                  <p>Comments are posted to this task in chronological order.</p>
                   <button
                     className="primary-button"
                     type="submit"
@@ -1702,9 +2264,7 @@ function TaskDetailsModal({
               ) : null}
 
               {isCommentsLoading ? (
-                <div className="comments-state">
-                  <p>Loading comments...</p>
-                </div>
+                <DetailInfoState title="Loading comments..." />
               ) : comments.length ? (
                 <div className="comments-list">
                   {comments.map((comment) => (
@@ -1720,12 +2280,12 @@ function TaskDetailsModal({
                   ))}
                 </div>
               ) : (
-                <div className="comments-state">
-                  <p>No comments yet.</p>
-                  <span>Start the thread with the first note on this task.</span>
-                </div>
+                <DetailInfoState
+                  title="No comments yet."
+                  description="Start the thread with the first note on this task."
+                />
               )}
-            </section>
+            </DetailPanel>
 
             <div className="detail-modal__actions">
               <button
@@ -1814,6 +2374,18 @@ function AssigneeAvatar({ member, size = 'medium' }) {
       aria-label={member.name}
     >
       {getMemberInitials(member.name)}
+    </span>
+  )
+}
+
+function LabelChip({ label }) {
+  return (
+    <span
+      className="label-chip"
+      style={{ '--label-color': getLabelColor(label) }}
+      title={label.name}
+    >
+      {label.name}
     </span>
   )
 }
