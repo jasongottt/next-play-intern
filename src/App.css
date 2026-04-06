@@ -117,8 +117,25 @@
   }
 }
 
+@keyframes submenu-spotlight-grid-drift {
+  from {
+    background-position:
+      0 0,
+      0 0,
+      0 0;
+  }
+
+  to {
+    background-position:
+      0 224px,
+      224px 0,
+      0 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .board-stage::after {
+  .board-stage::after,
+  .modal-backdrop::before {
     animation: none;
   }
 }
@@ -750,6 +767,20 @@
   transform: translate(-50%, -50%);
   border-radius: 50%;
   background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(214, 233, 255, 0.2) 0,
+      rgba(214, 233, 255, 0.2) 1px,
+      transparent 1px,
+      transparent 28px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(214, 233, 255, 0.2) 0,
+      rgba(214, 233, 255, 0.2) 1px,
+      transparent 1px,
+      transparent 28px
+    ),
     radial-gradient(
       circle at 50% 50%,
       rgba(224, 237, 255, 0.22) 0,
@@ -758,8 +789,18 @@
       rgba(70, 101, 163, 0.08) 54%,
       rgba(4, 7, 14, 0) 58%
     );
+  background-size:
+    28px 28px,
+    28px 28px,
+    100% 100%;
+  background-position:
+    0 0,
+    0 0,
+    0 0;
   filter: blur(2px);
+  mix-blend-mode: screen;
   opacity: 1;
+  animation: submenu-spotlight-grid-drift 12s linear infinite;
 }
 
 .modal-backdrop::after {
