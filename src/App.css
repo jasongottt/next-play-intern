@@ -30,9 +30,10 @@
   mask-image: radial-gradient(
     circle 400px at var(--spotlight-x) var(--spotlight-y),
     transparent 0,
-    transparent 32%,
-    rgba(0, 0, 0, 0.78) 74%,
-    rgba(0, 0, 0, 1) 80%
+    transparent 52%,
+    rgba(0, 0, 0, 0.1) 56%,
+    rgba(0, 0, 0, 0.88) 60%,
+    rgba(0, 0, 0, 1) 64%
   );
   opacity: 1;
 }
@@ -41,32 +42,27 @@
   background-color: rgba(255, 255, 255, 0.05);
   background-image:
     repeating-linear-gradient(
-      102deg,
-      rgba(255, 255, 255, 0.055) 0,
-      rgba(255, 255, 255, 0.055) 1px,
-      rgba(255, 255, 255, 0.015) 1px,
-      rgba(255, 255, 255, 0.015) 5px,
-      transparent 5px,
-      transparent 16px
+      0deg,
+      rgba(214, 233, 255, 0.28) 0,
+      rgba(214, 233, 255, 0.28) 1px,
+      transparent 1px,
+      transparent 28px
     ),
     repeating-linear-gradient(
-      102deg,
-      rgba(124, 177, 255, 0.03) 0,
-      rgba(124, 177, 255, 0.03) 2px,
-      transparent 2px,
-      transparent 24px
+      90deg,
+      rgba(214, 233, 255, 0.28) 0,
+      rgba(214, 233, 255, 0.28) 1px,
+      transparent 1px,
+      transparent 28px
     ),
     linear-gradient(
-      102deg,
-      rgba(255, 255, 255, 0.04) 0%,
-      rgba(255, 255, 255, 0.015) 28%,
-      rgba(124, 177, 255, 0.02) 52%,
-      rgba(255, 255, 255, 0.01) 76%,
-      rgba(255, 255, 255, 0.04) 100%
+      0deg,
+      rgba(124, 177, 255, 0.14) 0%,
+      rgba(124, 177, 255, 0.05) 100%
     );
   background-size:
-    100% 100%,
-    100% 100%,
+    28px 28px,
+    28px 28px,
     100% 100%;
   background-position:
     0 0,
@@ -78,12 +74,13 @@
   mask-image: radial-gradient(
     circle 250px at var(--spotlight-x) var(--spotlight-y),
     rgba(0, 0, 0, 1) 0,
-    rgba(0, 0, 0, 0.72) 58%,
-    transparent 84%
+    rgba(0, 0, 0, 1) 62%,
+    rgba(0, 0, 0, 0.4) 70%,
+    transparent 76%
   );
   opacity: var(--spotlight-opacity);
   transition: opacity 180ms ease;
-  animation: spotlight-texture-drift 18s linear infinite;
+  animation: spotlight-texture-drift 10s linear infinite;
 }
 
 .board-stage--spotlight-off::before,
@@ -114,9 +111,9 @@
 
   to {
     background-position:
-      240px -80px,
-      140px -40px,
-      90px -25px;
+      0 280px,
+      280px 0,
+      0 0;
   }
 }
 
@@ -457,9 +454,8 @@
 }
 
 .board-column__count {
-  border: 1px solid var(--border);
-  background: var(--surface-muted);
   color: var(--text-soft);
+  font-size: 1rem;
 }
 
 .board-column__body {
@@ -756,14 +752,14 @@
   background:
     radial-gradient(
       circle at 50% 50%,
-      rgba(214, 230, 255, 0.18) 0,
-      rgba(160, 194, 255, 0.14) 18%,
-      rgba(124, 177, 255, 0.1) 38%,
-      rgba(52, 76, 126, 0.08) 56%,
-      rgba(4, 7, 14, 0) 74%
+      rgba(224, 237, 255, 0.22) 0,
+      rgba(206, 226, 255, 0.18) 34%,
+      rgba(124, 177, 255, 0.14) 50%,
+      rgba(70, 101, 163, 0.08) 54%,
+      rgba(4, 7, 14, 0) 58%
     );
-  filter: blur(16px);
-  opacity: 0.92;
+  filter: blur(2px);
+  opacity: 1;
 }
 
 .modal-backdrop::after {
@@ -771,10 +767,10 @@
   background:
     radial-gradient(
       circle var(--submenu-vignette-size) at 50% 50%,
-      rgba(4, 7, 14, 0.06) 0,
-      rgba(4, 7, 14, 0.12) 34%,
-      rgba(4, 7, 14, 0.42) 56%,
-      rgba(4, 7, 14, 0.82) 78%,
+      rgba(4, 7, 14, 0.02) 0,
+      rgba(4, 7, 14, 0.05) 42%,
+      rgba(4, 7, 14, 0.72) 56%,
+      rgba(4, 7, 14, 0.9) 64%,
       rgba(4, 7, 14, 0.96) 100%
     );
 }
