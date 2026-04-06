@@ -172,6 +172,10 @@ function formatRelativeTime(value) {
   return relativeTimeFormatter.format(elapsedSeconds, 'second')
 }
 
+function getPriorityLabel(priority) {
+  return PRIORITY_OPTIONS.find((option) => option.value === priority)?.label ?? priority
+}
+
 function getDueDateTone(dueDate) {
   if (!dueDate) {
     return 'neutral'
@@ -464,6 +468,7 @@ function App() {
   const [isDetailEditing, setIsDetailEditing] = useState(false)
   const [isSavingTask, setIsSavingTask] = useState(false)
   const [isDeletingTask, setIsDeletingTask] = useState(false)
+  const [isUpdatingAssignees, setIsUpdatingAssignees] = useState(false)
   const [isSpotlightEnabled, setIsSpotlightEnabled] = useState(true)
   const [formState, setFormState] = useState(EMPTY_FORM)
   const [detailFormState, setDetailFormState] = useState(EMPTY_FORM)
@@ -783,6 +788,54 @@ function App() {
         ? current.filter((value) => value !== labelId)
         : [...current, labelId],
     )
+  }
+
+  async function handleQuickToggleAssignee(memberId) {
+    if (!selectedTask || isUpdatingAssignees) {
+      return
+    }
+
+    const previousAssigneeIds = getTaskAssigneeIds(selectedTask.id, taskAssignments)
+    const nextAssigneeIds = previousAssigneeIds.includes(memberId)
+      ? previousAssigneeIds.filter((value) => value !== memberId)
+      : [...previousAssigneeIds, memberId]
+
+    setIsUpdatingAssignees(true)
+    setDetailError('')
+
+    try {
+      await replaceTaskAssignees(selectedTask.id, nextAssigneeIds)
+
+      setTaskAssignments((current) => {
+        const nextAssignments = { ...current }
+
+        if (nextAssigneeIds.length) {
+          nextAssignments[selectedTask.id] = nextAssigneeIds
+        } else {
+          delete nextAssignments[selectedTask.id]
+        }
+
+        return nextAssignments
+      })
+
+      const assignmentMessage = buildAssignmentActivityMessage(
+        previousAssigneeIds,
+        nextAssigneeIds,
+        teamMembersById,
+      )
+
+      if (assignmentMessage) {
+        await recordTaskActivity(
+          selectedTask.id,
+          'task_assignments_updated',
+          assignmentMessage,
+        )
+      }
+    } catch (error) {
+      setDetailError(error.message || 'Unable to update assignees right now.')
+    } finally {
+      setIsUpdatingAssignees(false)
+    }
   }
 
   function handleToggleSpotlight() {
@@ -1224,11 +1277,7 @@ function App() {
         <div className="board-stage__content">
           <section className="board-toolbar">
             <BoardHero
-              labelCount={labels.length}
               stats={boardStats}
-              teamCount={teamMembers.length}
-              totalTasks={tasks.length}
-              isFiltered={hasActiveFilters}
             />
 
             <div className="board-toolbar__actions">
@@ -1409,6 +1458,7 @@ function App() {
           isDeleting={isDeletingTask}
           isEditing={isDetailEditing}
           isSaving={isSavingTask}
+          isUpdatingAssignees={isUpdatingAssignees}
           labelOptions={labels}
           memberOptions={teamMembers}
           selectedLabelIds={selectedLabelIds}
@@ -1423,6 +1473,7 @@ function App() {
           onCreateComment={handleCreateComment}
           onLabelToggle={handleToggleLabel}
           onOpenLabels={handleOpenLabels}
+          onQuickToggleAssignee={handleQuickToggleAssignee}
           onToggleAssignee={handleToggleAssignee}
           onOpenTeam={handleOpenTeam}
           onSubmit={handleSaveTask}
@@ -1493,7 +1544,7 @@ function BoardColumn({
   )
 }
 
-function BoardHero({ labelCount, stats, teamCount, totalTasks, isFiltered }) {
+function BoardHero({ stats }) {
   return (
     <header className="app-header">
       <div className="app-header__main">
@@ -1504,34 +1555,21 @@ function BoardHero({ labelCount, stats, teamCount, totalTasks, isFiltered }) {
 
       <div className="app-header__support">
         <div className="hero-panel__meta" aria-label="Board overview">
-          <span className="meta-chip">{totalTasks} tasks</span>
-          <span className="meta-chip">{teamCount} team members</span>
-          <span className="meta-chip">{labelCount} labels</span>
+          <span className="meta-chip">
+            <span className="meta-chip__label">Total tasks</span>
+            <strong>{stats.total}</strong>
+          </span>
+          <span className="meta-chip">
+            <span className="meta-chip__label">Completed</span>
+            <strong>{stats.completed}</strong>
+          </span>
+          <span className="meta-chip meta-chip--warning">
+            <span className="meta-chip__label">Overdue</span>
+            <strong>{stats.overdue}</strong>
+          </span>
         </div>
-        <BoardSummary stats={stats} isFiltered={isFiltered} />
       </div>
     </header>
-  )
-}
-
-function BoardSummary({ stats, isFiltered }) {
-  return (
-    <section className="board-summary" aria-label="Board summary">
-      <div className="board-summary__stats">
-        <article className="board-summary__card">
-          <span className="board-summary__label">Total Tasks</span>
-          <strong>{stats.total}</strong>
-        </article>
-        <article className="board-summary__card">
-          <span className="board-summary__label">Completed</span>
-          <strong>{stats.completed}</strong>
-        </article>
-        <article className="board-summary__card board-summary__card--warning">
-          <span className="board-summary__label">Overdue</span>
-          <strong>{stats.overdue}</strong>
-        </article>
-      </div>
-    </section>
   )
 }
 
@@ -1610,12 +1648,16 @@ function TaskPreviewCard({ assignees, labels, task }) {
 function TaskCardContent({ assignees, labels, task, dueLabel, dueTone }) {
   return (
     <>
-        <span className={`badge badge--priority-${task.priority}`}>
-          {task.priority}
+      <div className="task-card__signals">
+        <span className={`task-card__signal task-card__signal--priority-${task.priority}`}>
+          {getPriorityLabel(task.priority)} priority
         </span>
         {dueLabel ? (
-          <span className={`badge badge--due-${dueTone}`}>Due {dueLabel}</span>
+          <span className={`task-card__signal task-card__signal--due-${dueTone}`}>
+            Due {dueLabel}
+          </span>
         ) : null}
+      </div>
 
       <h3>{task.title}</h3>
 
@@ -1946,22 +1988,6 @@ function DetailInfoState({ description, title }) {
   )
 }
 
-function DetailFact({ actionLabel, children, label, onAction }) {
-  return (
-    <article className="detail-fact">
-      <div className="detail-fact__header">
-        <span className="detail-fact__label">{label}</span>
-        {actionLabel && onAction ? (
-          <button className="detail-fact__action" type="button" onClick={onAction}>
-            {actionLabel}
-          </button>
-        ) : null}
-      </div>
-      <div className="detail-fact__content">{children}</div>
-    </article>
-  )
-}
-
 function TaskDetailsModal({
   activity,
   activityError,
@@ -1978,6 +2004,7 @@ function TaskDetailsModal({
   isDeleting,
   isEditing,
   isSaving,
+  isUpdatingAssignees,
   labelOptions,
   memberOptions,
   selectedLabelIds,
@@ -1992,12 +2019,22 @@ function TaskDetailsModal({
   onCreateComment,
   onLabelToggle,
   onOpenLabels,
+  onQuickToggleAssignee,
   onToggleAssignee,
   onOpenTeam,
   onSubmit,
 }) {
+  const [isAssigneePickerOpen, setIsAssigneePickerOpen] = useState(false)
   const dueLabel = formatDueDate(task.due_date)
   const dueTone = getDueDateTone(task.due_date)
+  const visibleAssignees = assignees.slice(0, 4)
+  const overflowAssignees = assignees.length - visibleAssignees.length
+
+  useEffect(() => {
+    if (isEditing) {
+      setIsAssigneePickerOpen(false)
+    }
+  }, [isEditing])
 
   return (
     <div className="modal-backdrop" role="presentation" onClick={onClose}>
@@ -2123,16 +2160,94 @@ function TaskDetailsModal({
         ) : (
           <div className="detail-modal__content">
             <section className="detail-modal__hero">
-              <div className="detail-modal__meta">
-                <span className={`badge badge--priority-${task.priority}`}>
-                  {task.priority}
-                </span>
-                <span className="badge badge--status">{getColumnTitle(task.status)}</span>
-                {dueLabel ? (
-                  <span className={`badge badge--due-${dueTone}`}>Due {dueLabel}</span>
-                ) : (
-                  <span className="badge badge--due-neutral">No due date</span>
-                )}
+              <div className="detail-modal__hero-top">
+                <div className="detail-modal__meta">
+                  <span className={`badge badge--priority-${task.priority}`}>
+                    {task.priority}
+                  </span>
+                  <span className="badge badge--status">{getColumnTitle(task.status)}</span>
+                  {dueLabel ? (
+                    <span className={`badge badge--due-${dueTone}`}>Due {dueLabel}</span>
+                  ) : (
+                    <span className="badge badge--due-neutral">No due date</span>
+                  )}
+                  {labels.map((label) => (
+                    <LabelChip key={label.id} label={label} />
+                  ))}
+                </div>
+
+                <div className="detail-modal__hero-assignees">
+                  {visibleAssignees.length ? (
+                    <div className="detail-modal__hero-avatars">
+                      {visibleAssignees.map((member) => (
+                        <AssigneeAvatar key={member.id} member={member} />
+                      ))}
+                      {overflowAssignees > 0 ? (
+                        <span className="detail-modal__hero-overflow">
+                          +{overflowAssignees}
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <span className="detail-modal__hero-assignees-empty">No assignees</span>
+                  )}
+
+                  <div className="detail-modal__assignee-menu">
+                    <button
+                      className="detail-modal__assignee-trigger"
+                      type="button"
+                      onClick={() => {
+                        if (!memberOptions.length) {
+                          onOpenTeam()
+                          return
+                        }
+
+                        setIsAssigneePickerOpen((current) => !current)
+                      }}
+                      disabled={isUpdatingAssignees}
+                      aria-expanded={isAssigneePickerOpen}
+                      aria-label="Add or remove assignees"
+                    >
+                      +
+                    </button>
+
+                    {isAssigneePickerOpen && memberOptions.length ? (
+                      <div className="detail-modal__assignee-picker">
+                        {memberOptions.map((member) => {
+                          const isSelected = selectedAssigneeIds.includes(member.id)
+
+                          return (
+                            <label
+                              key={member.id}
+                              className={[
+                                'detail-modal__assignee-option',
+                                isSelected ? 'detail-modal__assignee-option--selected' : '',
+                              ]
+                                .filter(Boolean)
+                                .join(' ')}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                disabled={isUpdatingAssignees}
+                                onChange={() => onQuickToggleAssignee(member.id)}
+                              />
+                              <AssigneeAvatar member={member} size="small" />
+                              <span>{member.name}</span>
+                            </label>
+                          )
+                        })}
+                        <button
+                          className="detail-modal__assignee-manage"
+                          type="button"
+                          onClick={onOpenTeam}
+                        >
+                          Manage team
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
               </div>
               <h3 className="detail-modal__title">{task.title}</h3>
               <p className="detail-modal__subtitle">
@@ -2141,49 +2256,6 @@ function TaskDetailsModal({
                   : 'Add more detail to explain the goal, context, or acceptance criteria.'}
               </p>
             </section>
-
-            <div className="detail-facts">
-              <DetailFact
-                label="Assignees"
-                actionLabel={!assignees.length ? 'Manage Team' : null}
-                onAction={!assignees.length ? onOpenTeam : undefined}
-              >
-                {assignees.length ? (
-                  <>
-                    <div className="detail-fact__avatars">
-                      {assignees.map((member) => (
-                        <AssigneeAvatar key={member.id} member={member} size="small" />
-                      ))}
-                    </div>
-                    <p className="detail-fact__text">
-                      {joinLabelList(assignees.map((member) => member.name))}
-                    </p>
-                  </>
-                ) : (
-                  <p className="detail-fact__empty">No assignees yet.</p>
-                )}
-              </DetailFact>
-
-              <DetailFact
-                label="Labels"
-                actionLabel={!labels.length ? 'Manage Labels' : null}
-                onAction={!labels.length ? onOpenLabels : undefined}
-              >
-                {labels.length ? (
-                  <div className="detail-panel__labels">
-                    {labels.map((label) => (
-                      <LabelChip key={label.id} label={label} />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="detail-fact__empty">No labels yet.</p>
-                )}
-              </DetailFact>
-
-              <DetailFact label="Created">
-                <p className="detail-fact__text">{formatDateTime(task.created_at)}</p>
-              </DetailFact>
-            </div>
 
             <DetailPanel
               label="Activity"
