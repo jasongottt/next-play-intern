@@ -38,7 +38,41 @@
 }
 
 .board-stage::after {
-  background-color: rgba(255, 255, 255, 0.06);
+  background-color: rgba(255, 255, 255, 0.05);
+  background-image:
+    repeating-linear-gradient(
+      102deg,
+      rgba(255, 255, 255, 0.055) 0,
+      rgba(255, 255, 255, 0.055) 1px,
+      rgba(255, 255, 255, 0.015) 1px,
+      rgba(255, 255, 255, 0.015) 5px,
+      transparent 5px,
+      transparent 16px
+    ),
+    repeating-linear-gradient(
+      102deg,
+      rgba(124, 177, 255, 0.03) 0,
+      rgba(124, 177, 255, 0.03) 2px,
+      transparent 2px,
+      transparent 24px
+    ),
+    linear-gradient(
+      102deg,
+      rgba(255, 255, 255, 0.04) 0%,
+      rgba(255, 255, 255, 0.015) 28%,
+      rgba(124, 177, 255, 0.02) 52%,
+      rgba(255, 255, 255, 0.01) 76%,
+      rgba(255, 255, 255, 0.04) 100%
+    );
+  background-size:
+    100% 100%,
+    100% 100%,
+    100% 100%;
+  background-position:
+    0 0,
+    0 0,
+    0 0;
+  mix-blend-mode: soft-light;
   backdrop-filter: brightness(1.08) contrast(1.04);
   -webkit-backdrop-filter: brightness(1.08) contrast(1.04);
   mask-image: radial-gradient(
@@ -49,6 +83,7 @@
   );
   opacity: var(--spotlight-opacity);
   transition: opacity 180ms ease;
+  animation: spotlight-texture-drift 18s linear infinite;
 }
 
 .board-stage--spotlight-off::before,
@@ -67,6 +102,28 @@
 .board-stage__content > * {
   position: relative;
   z-index: 1;
+}
+
+@keyframes spotlight-texture-drift {
+  from {
+    background-position:
+      0 0,
+      0 0,
+      0 0;
+  }
+
+  to {
+    background-position:
+      240px -80px,
+      140px -40px,
+      90px -25px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board-stage::after {
+    animation: none;
+  }
 }
 
 .app-header {
