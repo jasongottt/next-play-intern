@@ -1406,41 +1406,6 @@ function App() {
         </div>
       </section>
 
-      {isCreateOpen ? (
-        <CreateTaskModal
-          errorMessage={createError}
-          formState={formState}
-          isCreating={isCreating}
-          onChange={handleFieldChange}
-          onClose={handleCloseCreate}
-          onSubmit={handleCreateTask}
-        />
-      ) : null}
-
-      {isTeamOpen ? (
-        <TeamModal
-          errorMessage={memberError}
-          formState={memberFormState}
-          isCreating={isCreatingMember}
-          members={teamMembers}
-          onChange={handleMemberFieldChange}
-          onClose={handleCloseTeam}
-          onSubmit={handleCreateMember}
-        />
-      ) : null}
-
-      {isLabelsOpen ? (
-        <LabelsModal
-          errorMessage={labelError}
-          formState={labelFormState}
-          isCreating={isCreatingLabel}
-          labels={labels}
-          onChange={handleLabelFieldChange}
-          onClose={handleCloseLabels}
-          onSubmit={handleCreateLabel}
-        />
-      ) : null}
-
       {selectedTask ? (
         <TaskDetailsModal
           activity={taskActivity}
@@ -1477,6 +1442,41 @@ function App() {
           onToggleAssignee={handleToggleAssignee}
           onOpenTeam={handleOpenTeam}
           onSubmit={handleSaveTask}
+        />
+      ) : null}
+
+      {isCreateOpen ? (
+        <CreateTaskModal
+          errorMessage={createError}
+          formState={formState}
+          isCreating={isCreating}
+          onChange={handleFieldChange}
+          onClose={handleCloseCreate}
+          onSubmit={handleCreateTask}
+        />
+      ) : null}
+
+      {isTeamOpen ? (
+        <TeamModal
+          errorMessage={memberError}
+          formState={memberFormState}
+          isCreating={isCreatingMember}
+          members={teamMembers}
+          onChange={handleMemberFieldChange}
+          onClose={handleCloseTeam}
+          onSubmit={handleCreateMember}
+        />
+      ) : null}
+
+      {isLabelsOpen ? (
+        <LabelsModal
+          errorMessage={labelError}
+          formState={labelFormState}
+          isCreating={isCreatingLabel}
+          labels={labels}
+          onChange={handleLabelFieldChange}
+          onClose={handleCloseLabels}
+          onSubmit={handleCreateLabel}
         />
       ) : null}
     </main>
