@@ -9,7 +9,7 @@ import {
   useSensors,
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { COLUMNS } from './constants/columns'
 import {
   createTask,
@@ -520,6 +520,24 @@ function App() {
     filters.priority !== 'all' ||
     filters.labelId !== 'all'
 
+  const handleCloseDetails = useCallback(() => {
+    if (isSavingTask || isDeletingTask) {
+      return
+    }
+
+    setDetailError('')
+    setActivityError('')
+    setCommentsError('')
+    setSelectedTaskId(null)
+    setDetailFormState(EMPTY_FORM)
+    setSelectedAssigneeIds([])
+    setSelectedLabelIds([])
+    setCommentFormState(EMPTY_COMMENT_FORM)
+    setTaskActivity([])
+    setTaskComments([])
+    setIsDetailEditing(false)
+  }, [isDeletingTask, isSavingTask])
+
   useEffect(() => {
     initializeBoard()
   }, [])
@@ -537,7 +555,7 @@ function App() {
     if (!isDetailEditing && !isSavingTask) {
       setDetailFormState(getTaskFormState(selectedTask))
     }
-  }, [selectedTaskId, selectedTask, isDetailEditing, isSavingTask])
+  }, [handleCloseDetails, selectedTaskId, selectedTask, isDetailEditing, isSavingTask])
 
   useEffect(() => {
     if (!selectedTaskId) {
@@ -981,24 +999,6 @@ function App() {
     setSelectedAssigneeIds(getTaskAssigneeIds(task.id, taskAssignments))
     setSelectedLabelIds(getTaskLabelIds(task.id, taskLabelMap))
     setCommentFormState(EMPTY_COMMENT_FORM)
-    setIsDetailEditing(false)
-  }
-
-  function handleCloseDetails() {
-    if (isSavingTask || isDeletingTask) {
-      return
-    }
-
-    setDetailError('')
-    setActivityError('')
-    setCommentsError('')
-    setSelectedTaskId(null)
-    setDetailFormState(EMPTY_FORM)
-    setSelectedAssigneeIds([])
-    setSelectedLabelIds([])
-    setCommentFormState(EMPTY_COMMENT_FORM)
-    setTaskActivity([])
-    setTaskComments([])
     setIsDetailEditing(false)
   }
 
@@ -2030,11 +2030,10 @@ function TaskDetailsModal({
   const visibleAssignees = assignees.slice(0, 4)
   const overflowAssignees = assignees.length - visibleAssignees.length
 
-  useEffect(() => {
-    if (isEditing) {
-      setIsAssigneePickerOpen(false)
-    }
-  }, [isEditing])
+  function handleEditAction() {
+    setIsAssigneePickerOpen(false)
+    onEdit()
+  }
 
   return (
     <div className="modal-backdrop" role="presentation" onClick={onClose}>
@@ -2259,9 +2258,7 @@ function TaskDetailsModal({
 
             <DetailPanel
               label="Activity"
-              // meta={`${activity.length} event${activity.length === 1 ? '' : 's'}`}
             >
-
               {activityError ? (
                 <div className="banner banner--error" role="alert">
                   {activityError}
@@ -2302,9 +2299,7 @@ function TaskDetailsModal({
 
             <DetailPanel
               label="Comments"
-              // meta={`${comments.length} comment${comments.length === 1 ? '' : 's'}`}
             >
-
               <form className="comment-form" onSubmit={onCreateComment}>
                 <label className="comment-form__field">
                   <span>Add a comment</span>
@@ -2363,7 +2358,7 @@ function TaskDetailsModal({
               <button
                 className="icon-button"
                 type="button"
-                onClick={onEdit}
+                onClick={handleEditAction}
                 disabled={isDeleting}
               >
                 Edit Task
