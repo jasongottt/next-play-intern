@@ -828,7 +828,6 @@
   display: grid;
   gap: 12px;
   padding: 20px 22px;
-  border: 1px solid rgba(136, 159, 203, 0.16);
   border-radius: 24px;
   background: rgba(16, 24, 43, 0.92);
   box-shadow: var(--shadow-sm);
@@ -997,7 +996,6 @@
 }
 
 .detail-panel {
-  border: 1px solid rgba(136, 159, 203, 0.16);
   border-radius: 20px;
   padding: 18px;
   background: rgba(18, 27, 47, 0.78);

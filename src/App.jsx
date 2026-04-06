@@ -1293,7 +1293,7 @@ function App() {
                 Manage Team
               </button>
               <button className="icon-button" type="button" onClick={handleOpenLabels}>
-                Manage Labels
+                Custom Labels
               </button>
               <button className="primary-button" type="button" onClick={handleOpenCreate}>
                 New Task
@@ -1876,7 +1876,7 @@ function LabelsModal({
         <div className="modal__header">
           <div>
             <span className="modal__eyebrow">Custom tags</span>
-            <h2 id="labels-modal-title">Manage labels</h2>
+            <h2 id="labels-modal-title">Custom labels</h2>
           </div>
 
           <button
@@ -2135,7 +2135,7 @@ function TaskDetailsModal({
                   </div>
                 ) : (
                   <DetailEmptyState
-                    actionLabel="Manage Labels"
+                    actionLabel="Custom Labels"
                     message="Create labels before tagging tasks."
                     onAction={onOpenLabels}
                   />
@@ -2259,7 +2259,7 @@ function TaskDetailsModal({
 
             <DetailPanel
               label="Activity"
-              meta={`${activity.length} event${activity.length === 1 ? '' : 's'}`}
+              // meta={`${activity.length} event${activity.length === 1 ? '' : 's'}`}
             >
 
               {activityError ? (
@@ -2302,7 +2302,7 @@ function TaskDetailsModal({
 
             <DetailPanel
               label="Comments"
-              meta={`${comments.length} comment${comments.length === 1 ? '' : 's'}`}
+              // meta={`${comments.length} comment${comments.length === 1 ? '' : 's'}`}
             >
 
               <form className="comment-form" onSubmit={onCreateComment}>
@@ -2354,7 +2354,7 @@ function TaskDetailsModal({
               ) : (
                 <DetailInfoState
                   title="No comments yet."
-                  description="Start the thread with the first note on this task."
+                  description="Start by leaving the first note on this task!"
                 />
               )}
             </DetailPanel>
