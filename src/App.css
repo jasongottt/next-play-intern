@@ -29,6 +29,15 @@
   mix-blend-mode: saturation;
   backdrop-filter: saturate(0.72) brightness(0.78);
   -webkit-backdrop-filter: saturate(0.72) brightness(0.78);
+  -webkit-mask-image: radial-gradient(
+    circle 400px at var(--spotlight-x) var(--spotlight-y),
+    transparent 0,
+    transparent 48%,
+    rgba(0, 0, 0, 0.08) 56%,
+    rgba(0, 0, 0, 0.42) 64%,
+    rgba(0, 0, 0, 0.82) 72%,
+    rgba(0, 0, 0, 1) 80%
+  );
   mask-image: radial-gradient(
     circle 400px at var(--spotlight-x) var(--spotlight-y),
     transparent 0,
@@ -74,6 +83,14 @@
   mix-blend-mode: soft-light;
   backdrop-filter: brightness(1.08) contrast(1.04);
   -webkit-backdrop-filter: brightness(1.08) contrast(1.04);
+  -webkit-mask-image: radial-gradient(
+    circle 250px at var(--spotlight-x) var(--spotlight-y),
+    rgba(0, 0, 0, 1) 0,
+    rgba(0, 0, 0, 1) 56%,
+    rgba(0, 0, 0, 0.72) 66%,
+    rgba(0, 0, 0, 0.28) 78%,
+    transparent 88%
+  );
   mask-image: radial-gradient(
     circle 250px at var(--spotlight-x) var(--spotlight-y),
     rgba(0, 0, 0, 1) 0,
@@ -97,6 +114,15 @@
   mix-blend-mode: normal;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+  -webkit-mask-image: radial-gradient(
+    circle 340px at var(--spotlight-x) var(--spotlight-y),
+    transparent 0,
+    transparent 50%,
+    rgba(0, 0, 0, 0.08) 58%,
+    rgba(0, 0, 0, 0.55) 66%,
+    rgba(0, 0, 0, 0.94) 74%,
+    rgba(0, 0, 0, 1) 82%
+  );
   mask-image: radial-gradient(
     circle 340px at var(--spotlight-x) var(--spotlight-y),
     transparent 0,
@@ -109,6 +135,14 @@
 }
 
 .board-stage--spotlight-full::after {
+  -webkit-mask-image: radial-gradient(
+    circle 250px at var(--spotlight-x) var(--spotlight-y),
+    rgba(0, 0, 0, 1) 0,
+    rgba(0, 0, 0, 1) 62%,
+    rgba(0, 0, 0, 0.76) 72%,
+    rgba(0, 0, 0, 0.34) 82%,
+    transparent 92%
+  );
   mask-image: radial-gradient(
     circle 250px at var(--spotlight-x) var(--spotlight-y),
     rgba(0, 0, 0, 1) 0,
