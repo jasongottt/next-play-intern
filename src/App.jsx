@@ -95,6 +95,8 @@ const EMPTY_COMMENT_FORM = {
   body: '',
 }
 
+const SPOTLIGHT_MODE_ORDER = ['on', 'full', 'off']
+
 const COLUMN_IDS = new Set(COLUMNS.map((column) => column.id))
 
 const dateFormatter = new Intl.DateTimeFormat('en-US', {
@@ -479,7 +481,7 @@ function App() {
   const [isSavingTask, setIsSavingTask] = useState(false)
   const [isDeletingTask, setIsDeletingTask] = useState(false)
   const [isUpdatingAssignees, setIsUpdatingAssignees] = useState(false)
-  const [isSpotlightEnabled, setIsSpotlightEnabled] = useState(true)
+  const [spotlightMode, setSpotlightMode] = useState('on')
   const [formState, setFormState] = useState(EMPTY_FORM)
   const [detailFormState, setDetailFormState] = useState(EMPTY_FORM)
   const [memberFormState, setMemberFormState] = useState(EMPTY_MEMBER_FORM)
@@ -667,12 +669,12 @@ function App() {
   useEffect(() => {
     const stage = boardStageRef.current
 
-    if (!stage || isSpotlightEnabled) {
+    if (!stage || spotlightMode !== 'off') {
       return
     }
 
     stage.style.setProperty('--spotlight-opacity', '0')
-  }, [isSpotlightEnabled])
+  }, [spotlightMode])
 
   async function initializeBoard() {
     setIsLoading(true)
@@ -871,7 +873,11 @@ function App() {
   }
 
   function handleToggleSpotlight() {
-    setIsSpotlightEnabled((current) => !current)
+    setSpotlightMode((current) => {
+      const currentIndex = SPOTLIGHT_MODE_ORDER.indexOf(current)
+      const nextIndex = (currentIndex + 1) % SPOTLIGHT_MODE_ORDER.length
+      return SPOTLIGHT_MODE_ORDER[nextIndex]
+    })
   }
 
   async function recordTaskActivity(taskId, eventType, message) {
@@ -1225,7 +1231,7 @@ function App() {
   function handleBoardStagePointerMove(event) {
     const stage = boardStageRef.current
 
-    if (!stage || !isSpotlightEnabled) {
+    if (!stage || spotlightMode === 'off') {
       return
     }
 
@@ -1241,7 +1247,7 @@ function App() {
   function handleBoardStagePointerLeave() {
     const stage = boardStageRef.current
 
-    if (!stage || !isSpotlightEnabled) {
+    if (!stage || spotlightMode === 'off') {
       return
     }
 
@@ -1281,7 +1287,8 @@ function App() {
         ref={boardStageRef}
         className={[
           'board-stage',
-          isSpotlightEnabled ? '' : 'board-stage--spotlight-off',
+          spotlightMode === 'full' ? 'board-stage--spotlight-full' : '',
+          spotlightMode === 'off' ? 'board-stage--spotlight-off' : '',
         ]
           .filter(Boolean)
           .join(' ')}
@@ -1296,12 +1303,14 @@ function App() {
 
             <div className="board-toolbar__actions">
               <button
-                className={`icon-button ${isSpotlightEnabled ? 'icon-button--active' : ''}`}
+                className={`icon-button ${spotlightMode !== 'off' ? 'icon-button--active' : ''}`}
                 type="button"
                 onClick={handleToggleSpotlight}
-                aria-pressed={isSpotlightEnabled}
+                aria-pressed={spotlightMode !== 'off'}
+                aria-label={`Spotlight ${spotlightMode}. Click to cycle spotlight mode.`}
+                title="Cycle spotlight: on, full, off"
               >
-                Spotlight {isSpotlightEnabled ? 'On' : 'Off'}
+                Spotlight {spotlightMode === 'on' ? 'On' : spotlightMode === 'full' ? 'Full' : 'Off'}
               </button>
               <button className="icon-button" type="button" onClick={handleOpenTeam}>
                 Manage Team
