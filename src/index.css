@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Boldonse&family=Quicksand:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Boldonse&family=Oxanium:wght@500;600;700;800&family=Rajdhani:wght@500;600;700&family=Space+Grotesk:wght@400;500;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -9,7 +9,7 @@
 :root {
   color: #e7eefc;
   background: #070b15;
-  font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+  font-family: 'Space Grotesk', 'Geist Variable', 'Segoe UI', sans-serif;
   line-height: 1.5;
   font-weight: 400;
   font-synthesis: none;
@@ -33,8 +33,8 @@
   --shadow-sm: 0 12px 24px rgba(0, 0, 0, 0.22);
   --shadow-md: 0 18px 40px rgba(0, 0, 0, 0.32);
   --shadow-lg: 0 28px 60px rgba(0, 0, 0, 0.42);
-  --font-display: 'Quicksand', 'Trebuchet MS', sans-serif;
-  --font-title: 'Boldonse', 'Trebuchet MS', sans-serif;
+  --font-display: 'Rajdhani', 'Space Grotesk', 'Segoe UI', sans-serif;
+  --font-title: 'Oxanium', 'Rajdhani', 'Segoe UI', sans-serif;
   --background: #070b15;
   --foreground: #e7eefc;
   --card: #141d35;
@@ -131,7 +131,7 @@ h3 {
 
 @theme inline {
   --font-heading: var(--font-sans);
-  --font-sans: 'Geist Variable', sans-serif;
+  --font-sans: 'Space Grotesk', 'Geist Variable', sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);

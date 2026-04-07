@@ -46,6 +46,14 @@ const PRIORITY_FILTER_OPTIONS = [
   ...PRIORITY_OPTIONS,
 ]
 
+const COLUMN_FILTER_OPTIONS = [
+  { value: 'all', label: 'All columns' },
+  ...COLUMNS.map((column) => ({
+    value: column.id,
+    label: column.title,
+  })),
+]
+
 const MEMBER_COLOR_OPTIONS = [
   { value: '', label: 'Auto' },
   { value: '#7cb1ff', label: 'Sky' },
@@ -125,6 +133,8 @@ function filterTasks(tasks, filters) {
     const matchesTitle = normalizedQuery
       ? task.title.toLowerCase().includes(normalizedQuery)
       : true
+    const matchesColumn =
+      filters.columnId === 'all' ? true : task.status === filters.columnId
     const matchesPriority =
       filters.priority === 'all' ? true : task.priority === filters.priority
     const matchesLabel =
@@ -132,7 +142,7 @@ function filterTasks(tasks, filters) {
         ? true
         : (filters.taskLabelMap[task.id] ?? []).includes(filters.labelId)
 
-    return matchesTitle && matchesPriority && matchesLabel
+    return matchesTitle && matchesColumn && matchesPriority && matchesLabel
   })
 }
 
@@ -481,6 +491,7 @@ function App() {
   const [selectedLabelIds, setSelectedLabelIds] = useState([])
   const [filters, setFilters] = useState({
     searchQuery: '',
+    columnId: 'all',
     priority: 'all',
     labelId: 'all',
   })
@@ -517,6 +528,7 @@ function App() {
     .filter(Boolean)
   const hasActiveFilters =
     filters.searchQuery.trim().length > 0 ||
+    filters.columnId !== 'all' ||
     filters.priority !== 'all' ||
     filters.labelId !== 'all'
 
@@ -788,7 +800,9 @@ function App() {
   function handleResetFilters() {
     setFilters({
       searchQuery: '',
+      columnId: 'all',
       priority: 'all',
+      labelId: 'all',
     })
   }
 
@@ -1315,6 +1329,21 @@ function App() {
               </label>
 
               <label className="board-filters__select">
+                <span>Column</span>
+                <select
+                  name="columnId"
+                  value={filters.columnId}
+                  onChange={handleFilterChange}
+                >
+                  {COLUMN_FILTER_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="board-filters__select">
                 <span>Priority</span>
                 <select
                   name="priority"
@@ -1348,7 +1377,7 @@ function App() {
               </p>
               {hasActiveFilters ? (
                 <button
-                  className="icon-button"
+                  className="icon-button board-filters__clear"
                   type="button"
                   onClick={handleResetFilters}
                 >
@@ -1534,7 +1563,7 @@ function BoardColumn({
             <p>{hasActiveFilters ? 'No matching tasks.' : 'No tasks here yet.'}</p>
             <span>
               {hasActiveFilters
-                ? 'Try a different search, priority, or label filter.'
+                ? 'Try a different search, column, priority, or label filter.'
                 : 'Drop a task here or create a new one.'}
             </span>
           </div>
@@ -1653,7 +1682,17 @@ function TaskCardContent({ assignees, labels, task, dueLabel, dueTone }) {
           {getPriorityLabel(task.priority)} priority
         </span>
         {dueLabel ? (
-          <span className={`task-card__signal task-card__signal--due-${dueTone}`}>
+          <span
+            className={[
+              'task-card__signal',
+              `task-card__signal--due-${dueTone}`,
+              dueTone === 'soon' || dueTone === 'overdue'
+                ? 'task-card__signal--due-emphasis'
+                : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
             Due {dueLabel}
           </span>
         ) : null}
@@ -1744,7 +1783,6 @@ function CreateTaskModal({
           <TaskFormFields formState={formState} onChange={onChange} />
 
           <div className="task-form__footer">
-            <p>New tasks always start in the To Do column.</p>
             <button className="primary-button" type="submit" disabled={isCreating}>
               {isCreating ? 'Creating...' : 'Create Task'}
             </button>
