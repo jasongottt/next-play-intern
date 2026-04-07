@@ -1694,9 +1694,9 @@ function TaskAssigneeSummary({ assignees }) {
           <span className="task-card__assignee-overflow">+{overflowCount}</span>
         ) : null}
       </div>
-      <span className="task-card__assignee-count">
+      {/* <span className="task-card__assignee-count">
         {assignees.length} assignee{assignees.length === 1 ? '' : 's'}
-      </span>
+      </span> */}
     </div>
   )
 }
@@ -1843,7 +1843,7 @@ function TeamModal({
             </div>
 
             <div className="task-form__footer">
-              <p>Initials are generated automatically from the member name.</p>
+              {/* <p>Initials are generated automatically from the member name.</p> */}
               <button className="primary-button" type="submit" disabled={isCreating}>
                 {isCreating ? 'Adding...' : 'Add Member'}
               </button>
@@ -1940,7 +1940,6 @@ function LabelsModal({
             </div>
 
             <div className="task-form__footer">
-              <p>Use labels to group work like bugs, features, or design tasks.</p>
               <button className="primary-button" type="submit" disabled={isCreating}>
                 {isCreating ? 'Adding...' : 'Add Label'}
               </button>
